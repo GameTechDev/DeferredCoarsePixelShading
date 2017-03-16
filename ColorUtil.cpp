@@ -17,7 +17,7 @@
 D3DXVECTOR3 HueToRGB(float hue)
 {
     float intPart;
-    float fracPart = modf(hue * 6.0f, &intPart);
+    float fracPart = modff(hue * 6.0f, &intPart);
     int region = static_cast<int>(intPart);
     
     switch (region) {
