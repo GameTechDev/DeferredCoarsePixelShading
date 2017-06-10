@@ -33,7 +33,7 @@ Release
 # Shader compiled object file
 *.fxo
 
-# From DXUT .gitignore
+# From github.com/Microsoft/DirectXTex/.gitignore
 *.psess
 *.vsp
 *.log
