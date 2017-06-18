@@ -1,13 +1,22 @@
 /////////////////////////////////////////////////////////////////////////////////////////////
 // Copyright 2017 Intel Corporation
 //
-// Licensed under the Apache License, Version 2.0 (the "License");// you may not use this file except in compliance with the License.// You may obtain a copy of the License at//// http://www.apache.org/licenses/LICENSE-2.0//// Unless required by applicable law or agreed to in writing, software// distributed under the License is distributed on an "AS IS" BASIS,// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.// See the License for the specific language governing permissions and// limitations under the License.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
 
 #include <d3d11.h>
-#include <d3dx11.h>
 #include <assert.h>
 #include <d3d11shader.h>
 #include <d3dcompiler.h>
@@ -136,13 +145,8 @@ public:
         UINT shaderFlags = D3D10_SHADER_ENABLE_STRICTNESS | D3D10_SHADER_PACK_MATRIX_ROW_MAJOR;
 
         ID3D10Blob *bytecode = 0;
-        ID3D10Blob *errors = 0;
-        HRESULT hr = D3DX11CompileFromFile(srcFile, defines, 0, functionName, profile, shaderFlags, 0, 0, &bytecode, &errors, 0);
+        HRESULT hr = D3DCompileFromFile(srcFile, defines, D3D_COMPILE_STANDARD_FILE_INCLUDE, functionName, profile, shaderFlags, 0, &bytecode, 0);
         
-        if (errors) {
-            OutputDebugStringA(static_cast<const char *>(errors->GetBufferPointer()));
-        }
-
         if (FAILED(hr)) {
             // TODO: Define exception type and improve this error string, but the ODS will do for now
             throw std::runtime_error("Error compiling shader");
