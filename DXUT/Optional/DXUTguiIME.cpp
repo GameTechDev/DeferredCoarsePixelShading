@@ -1,7 +1,14 @@
 //--------------------------------------------------------------------------------------
 // File: DXUTguiIME.cpp
 //
+// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
+// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+// PARTICULAR PURPOSE.
+//
 // Copyright (c) Microsoft Corporation. All rights reserved.
+//
+// http://go.microsoft.com/fwlink/?LinkId=320437
 //--------------------------------------------------------------------------------------
 #include "DXUT.h"
 #include "DXUTgui.h"
@@ -10,8 +17,6 @@
 #include "DXUTgui.h"
 #include "DXUTguiIME.h"
 
-#undef min // use __min instead
-#undef max // use __max instead
 #define DXUT_NEAR_BUTTON_DEPTH 0.6f
 
 
@@ -35,15 +40,16 @@ bool      CDXUTIMEEditBox::m_bIMEStaticMsgProcCalled = false;
 
 
 //--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 HRESULT CDXUTIMEEditBox::CreateIMEEditBox( CDXUTDialog* pDialog, int ID, LPCWSTR strText, int x, int y, int width,
                                            int height, bool bIsDefault, CDXUTIMEEditBox** ppCreated )
 {
-    CDXUTIMEEditBox* pEditBox = new CDXUTIMEEditBox( pDialog );
+    auto pEditBox = new (std::nothrow) CDXUTIMEEditBox( pDialog );
 
-    if( ppCreated != NULL )
+    if( ppCreated )
         *ppCreated = pEditBox;
 
-    if( pEditBox == NULL )
+    if( !pEditBox )
         return E_OUTOFMEMORY;
 
     // Set the ID and position
@@ -60,7 +66,7 @@ HRESULT CDXUTIMEEditBox::CreateIMEEditBox( CDXUTDialog* pDialog, int ID, LPCWSTR
 
 
 //--------------------------------------------------------------------------------------
-void CDXUTIMEEditBox::InitDefaultElements( CDXUTDialog* pDialog )
+void CDXUTIMEEditBox::InitDefaultElements( _In_ CDXUTDialog* pDialog )
 {
     //-------------------------------------
     // CDXUTIMEEditBox
@@ -108,7 +114,7 @@ void CDXUTIMEEditBox::InitDefaultElements( CDXUTDialog* pDialog )
 
 
 //--------------------------------------------------------------------------------------
-CDXUTIMEEditBox::CDXUTIMEEditBox( CDXUTDialog* pDialog )
+CDXUTIMEEditBox::CDXUTIMEEditBox( _In_opt_ CDXUTDialog* pDialog )
 {
     m_Type = DXUT_CONTROL_IMEEDITBOX;
     m_pDialog = pDialog;
@@ -142,7 +148,7 @@ CDXUTIMEEditBox::~CDXUTIMEEditBox()
 
 
 //--------------------------------------------------------------------------------------
-void CDXUTIMEEditBox::SendKey( BYTE nVirtKey )
+void CDXUTIMEEditBox::SendKey( _In_ BYTE nVirtKey )
 {
     keybd_event( nVirtKey, 0, 0, 0 );
     keybd_event( nVirtKey, 0, KEYEVENTF_KEYUP, 0 );
@@ -193,7 +199,7 @@ void CDXUTIMEEditBox::UpdateRects()
 //--------------------------------------------------------------------------------------
 // Enable/disable the entire IME system.  When disabled, the default IME handling
 // kicks in.
-void CDXUTIMEEditBox::EnableImeSystem( bool bEnable )
+void CDXUTIMEEditBox::EnableImeSystem( _In_ bool bEnable )
 {
     ImeUi_EnableIme( bEnable );
 }
@@ -214,9 +220,9 @@ void CDXUTIMEEditBox::PumpMessage()
 {
     MSG msg;
 
-    while( PeekMessageW( &msg, NULL, 0, 0, PM_NOREMOVE ) )
+    while( PeekMessageW( &msg, nullptr, 0, 0, PM_NOREMOVE ) )
     {
-        if( !GetMessageW( &msg, NULL, 0, 0 ) )
+        if( !GetMessageW( &msg, nullptr, 0, 0 ) )
         {
             PostQuitMessage( ( int )msg.wParam );
             return;
@@ -245,8 +251,11 @@ void CDXUTIMEEditBox::OnFocusOut()
 
 
 //--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 bool CDXUTIMEEditBox::StaticMsgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
+    UNREFERENCED_PARAMETER(hWnd);
+    UNREFERENCED_PARAMETER(wParam);
 
     if( !ImeUi_IsEnabled() )
         return false;
@@ -295,7 +304,8 @@ bool CDXUTIMEEditBox::StaticMsgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 
 
 //--------------------------------------------------------------------------------------
-bool CDXUTIMEEditBox::HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lParam )
+_Use_decl_annotations_
+bool CDXUTIMEEditBox::HandleMouse( UINT uMsg, const POINT& pt, WPARAM wParam, LPARAM lParam )
 {
     if( !m_bEnabled || !m_bVisible )
         return false;
@@ -305,7 +315,7 @@ bool CDXUTIMEEditBox::HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lP
         case WM_LBUTTONDOWN:
         case WM_LBUTTONDBLCLK:
             {
-                DXUTFontNode* pFont = m_pDialog->GetFont( m_Elements.GetAt( 9 )->iFont );
+                auto pFont = m_pDialog->GetFont( m_Elements[ 9 ]->iFont );
 
                 // Check if this click is on top of the composition string
                 int nCompStrWidth;
@@ -430,7 +440,7 @@ bool CDXUTIMEEditBox::HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lP
                             if( nCharHit >= nEntryStart )
                             {
                                 // Haven't found it.
-                                nEntryStart += lstrlenW( ImeUi_GetCandidate( i ) ) + 1;  // plus space separator
+                                nEntryStart += (int)wcslen( ImeUi_GetCandidate( i ) ) + 1;  // plus space separator
                             }
                             else
                             {
@@ -463,6 +473,7 @@ bool CDXUTIMEEditBox::HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lP
 
 
 //--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 bool CDXUTIMEEditBox::MsgProc( UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
     if( !m_bEnabled || !m_bVisible )
@@ -497,15 +508,16 @@ bool CDXUTIMEEditBox::MsgProc( UINT uMsg, WPARAM wParam, LPARAM lParam )
 
 
 //--------------------------------------------------------------------------------------
-void CDXUTIMEEditBox::RenderCandidateReadingWindow( float fElapsedTime, bool bReading )
+_Use_decl_annotations_
+void CDXUTIMEEditBox::RenderCandidateReadingWindow( bool bReading )
 {
     RECT rc;
     UINT nNumEntries = bReading ? 4 : MAX_CANDLIST;
-    D3DCOLOR TextColor, TextBkColor, SelTextColor, SelBkColor;
     int nX, nXFirst, nXComp;
     m_Buffer.CPtoX( m_nCaret, FALSE, &nX );
     m_Buffer.CPtoX( m_nFirstVisible, FALSE, &nXFirst );
 
+    DWORD TextColor, TextBkColor, SelTextColor, SelBkColor;
     if( bReading )
     {
         TextColor = m_ReadingColor;
@@ -545,9 +557,9 @@ void CDXUTIMEEditBox::RenderCandidateReadingWindow( float fElapsedTime, bool bRe
             if( *( ImeUi_GetCandidate( i ) ) == L'\0' )
                 break;
             SetRect( &rc, 0, 0, 0, 0 );
-            m_pDialog->CalcTextRect( ImeUi_GetCandidate( i ), m_Elements.GetAt( 1 ), &rc );
-            nWidthRequired = __max( nWidthRequired, rc.right - rc.left );
-            nSingleLineHeight = __max( nSingleLineHeight, rc.bottom - rc.top );
+            m_pDialog->CalcTextRect( ImeUi_GetCandidate( i ), m_Elements[ 1 ], &rc );
+            nWidthRequired = std::max<int>( nWidthRequired, rc.right - rc.left );
+            nSingleLineHeight = std::max<int>( nSingleLineHeight, rc.bottom - rc.top );
         }
         nHeightRequired = nSingleLineHeight * nNumEntries;
     }
@@ -556,7 +568,7 @@ void CDXUTIMEEditBox::RenderCandidateReadingWindow( float fElapsedTime, bool bRe
         // Horizontal window
         SetRect( &rc, 0, 0, 0, 0 );
         if( bReading )
-            m_pDialog->CalcTextRect( s_wszReadingString, m_Elements.GetAt( 1 ), &rc );
+            m_pDialog->CalcTextRect( s_wszReadingString, m_Elements[ 1 ], &rc );
         else
         {
 
@@ -570,19 +582,19 @@ void CDXUTIMEEditBox::RenderCandidateReadingWindow( float fElapsedTime, bool bRe
                     break;
 
                 WCHAR wszEntry[32];
-                swprintf_s( wszEntry, 32, L"%s ", ImeUi_GetCandidate( i ) );
+                swprintf_s( wszEntry, 32, L"%ls ", ImeUi_GetCandidate( i ) );
                 // If this is the selected entry, mark its char position.
                 if( ImeUi_GetCandidateSelection() == i )
                 {
-                    s_CandList.nFirstSelected = lstrlen( wszCand );
-                    s_CandList.nHoriSelectedLen = lstrlen( wszEntry ) - 1;  // Minus space
+                    s_CandList.nFirstSelected = (int)wcslen( wszCand );
+                    s_CandList.nHoriSelectedLen = (int)wcslen( wszEntry ) - 1;  // Minus space
                 }
                 wcscat_s( wszCand, 256, wszEntry );
             }
-            wszCand[lstrlen( wszCand ) - 1] = L'\0';  // Remove the last space
+            wszCand[wcslen( wszCand ) - 1] = L'\0';  // Remove the last space
             s_CandList.HoriCand.SetText( wszCand );
 			
-            m_pDialog->CalcTextRect( s_CandList.HoriCand.GetBuffer(), m_Elements.GetAt( 1 ), &rc );
+            m_pDialog->CalcTextRect( s_CandList.HoriCand.GetBuffer(), m_Elements[ 1 ], &rc );
         }
         nWidthRequired = rc.right - rc.left;
         nSingleLineHeight = nHeightRequired = rc.bottom - rc.top;
@@ -670,12 +682,12 @@ void CDXUTIMEEditBox::RenderCandidateReadingWindow( float fElapsedTime, bool bRe
             if( ImeUi_GetCandidateSelection() == i )
             {
                 m_pDialog->DrawRect( &rc, SelBkColor );
-                m_Elements.GetAt( 1 )->FontColor.Current = SelTextColor;
+                m_Elements[ 1 ]->FontColor.SetCurrent( SelTextColor );
             }
             else
-                m_Elements.GetAt( 1 )->FontColor.Current = TextColor;
+                m_Elements[ 1 ]->FontColor.SetCurrent( TextColor );
 
-            m_pDialog->DrawText( ImeUi_GetCandidate( i ), m_Elements.GetAt( 1 ), &rc );
+            m_pDialog->DrawText( ImeUi_GetCandidate( i ), m_Elements[ 1 ], &rc );
 
             rc.top += nSingleLineHeight;
         }
@@ -683,11 +695,11 @@ void CDXUTIMEEditBox::RenderCandidateReadingWindow( float fElapsedTime, bool bRe
     else
     {
         // Horizontal candidate window
-        m_Elements.GetAt( 1 )->FontColor.Current = TextColor;
+        m_Elements[ 1 ]->FontColor.SetCurrent( TextColor );
         if( bReading )
-            m_pDialog->DrawText( s_wszReadingString, m_Elements.GetAt( 1 ), &rc );
+            m_pDialog->DrawText( s_wszReadingString, m_Elements[ 1 ], &rc );
         else
-            m_pDialog->DrawText( s_CandList.HoriCand.GetBuffer(), m_Elements.GetAt( 1 ), &rc );
+            m_pDialog->DrawText( s_CandList.HoriCand.GetBuffer(), m_Elements[ 1 ], &rc );
 
         // Render the selected entry differently
         if( !bReading )
@@ -699,16 +711,16 @@ void CDXUTIMEEditBox::RenderCandidateReadingWindow( float fElapsedTime, bool bRe
             rc.right = rc.left + nXRight;
             rc.left += nXLeft;
             m_pDialog->DrawRect( &rc, SelBkColor );
-            m_Elements.GetAt( 1 )->FontColor.Current = SelTextColor;
+            m_Elements[ 1 ]->FontColor.SetCurrent( SelTextColor );
             m_pDialog->DrawText( s_CandList.HoriCand.GetBuffer() + s_CandList.nFirstSelected,
-                                 m_Elements.GetAt( 1 ), &rc, false, s_CandList.nHoriSelectedLen );
+                                 m_Elements[ 1 ], &rc, false );
         }
     }
 }
 
 
 //--------------------------------------------------------------------------------------
-void CDXUTIMEEditBox::RenderComposition( float fElapsedTime )
+void CDXUTIMEEditBox::RenderComposition()
 {
 	
     s_CompString.SetText( ImeUi_GetCompositionString() );
@@ -720,7 +732,7 @@ void CDXUTIMEEditBox::RenderComposition( float fElapsedTime )
     int nX, nXFirst;
     m_Buffer.CPtoX( m_nCaret, FALSE, &nX );
     m_Buffer.CPtoX( m_nFirstVisible, FALSE, &nXFirst );
-    CDXUTElement* pElement = m_Elements.GetAt( 1 );
+    auto pElement = m_Elements[ 1 ];
 
     // Get the required width
     RECT rc =
@@ -743,10 +755,10 @@ void CDXUTIMEEditBox::RenderComposition( float fElapsedTime )
     s_ptCompString.x = rc.left; s_ptCompString.y = rc.top;
 
 
-    D3DCOLOR TextColor = m_CompColor;
+    DWORD TextColor = m_CompColor;
     // Render the window and string.
     // If the string is too long, we must wrap the line.
-    pElement->FontColor.Current = TextColor;
+    pElement->FontColor.SetCurrent( TextColor );
     const WCHAR* pwszComp = s_CompString.GetBuffer();
     int nCharLeft = s_CompString.GetTextSize();
     for(; ; )
@@ -755,7 +767,7 @@ void CDXUTIMEEditBox::RenderComposition( float fElapsedTime )
         int nLastInLine;
         int bTrail;
         s_CompString.XtoCP( m_rcText.right - rc.left, &nLastInLine, &bTrail );
-        int nNumCharToDraw = __min( nCharLeft, nLastInLine );
+        int nNumCharToDraw = std::min( nCharLeft, nLastInLine );
         m_pDialog->CalcTextRect( pwszComp, pElement, &rc, nNumCharToDraw );
 
         // Draw the background
@@ -772,7 +784,7 @@ void CDXUTIMEEditBox::RenderComposition( float fElapsedTime )
                 // Not drawing composition string background. We
                 // use the editbox's text color for composition
                 // string text.
-                TextColor = m_Elements.GetAt( 0 )->FontColor.States[DXUT_STATE_NORMAL];
+                TextColor = m_Elements[ 0 ]->FontColor.States[DXUT_STATE_NORMAL];
             }
         }
         else
@@ -782,8 +794,8 @@ void CDXUTIMEEditBox::RenderComposition( float fElapsedTime )
         }
 
         // Draw the text
-        pElement->FontColor.Current = TextColor;
-        m_pDialog->DrawText( pwszComp, pElement, &rc, false, nNumCharToDraw );
+        pElement->FontColor.SetCurrent( TextColor );
+        m_pDialog->DrawText( pwszComp, pElement, &rc, false );
 
         // Advance pointer and counter
         nCharLeft -= nNumCharToDraw;
@@ -809,7 +821,7 @@ void CDXUTIMEEditBox::RenderComposition( float fElapsedTime )
     for( pcComp = s_CompString.GetBuffer(), pAttr = ImeUi_GetCompStringAttr();
          *pcComp != L'\0'; ++pcComp, ++pAttr )
     {
-        D3DCOLOR bkColor;
+        DWORD bkColor;
 
         // Render a different background for this character
         int nXLeft, nXRight;
@@ -840,12 +852,12 @@ void CDXUTIMEEditBox::RenderComposition( float fElapsedTime )
         // Set up color based on the character attribute
         if( *pAttr == ATTR_TARGET_CONVERTED )
         {
-            pElement->FontColor.Current = m_CompTargetColor;
+            pElement->FontColor.SetCurrent( m_CompTargetColor );
             bkColor = m_CompTargetBkColor;
         }
         else if( *pAttr == ATTR_TARGET_NOTCONVERTED )
         {
-            pElement->FontColor.Current = m_CompTargetNonColor;
+            pElement->FontColor.SetCurrent( m_CompTargetNonColor );
             bkColor = m_CompTargetNonBkColor;
         }
         else
@@ -884,22 +896,22 @@ void CDXUTIMEEditBox::RenderComposition( float fElapsedTime )
 
 
 //--------------------------------------------------------------------------------------
-void CDXUTIMEEditBox::RenderIndicator( float fElapsedTime )
+void CDXUTIMEEditBox::RenderIndicator( _In_ float fElapsedTime )
 {
-    CDXUTElement* pElement = m_Elements.GetAt( 9 );
+    auto pElement = m_Elements[ 9 ];
     pElement->TextureColor.Blend( DXUT_STATE_NORMAL, fElapsedTime );
 
     m_pDialog->DrawSprite( pElement, &m_rcIndicator, DXUT_NEAR_BUTTON_DEPTH );
     RECT rc = m_rcIndicator;
     InflateRect( &rc, -m_nSpacing, -m_nSpacing );
 
-    pElement->FontColor.Current = m_IndicatorImeColor;
+    pElement->FontColor.SetCurrent( m_IndicatorImeColor );
     RECT rcCalc =
     {
         0, 0, 0, 0
     };
     // If IME system is off, draw English indicator.
-    WCHAR* pwszIndicator = ImeUi_IsEnabled() ? ImeUi_GetIndicatior() : L"En";
+    const WCHAR* pwszIndicator = ImeUi_IsEnabled() ? ImeUi_GetIndicatior() : L"En";
 
     m_pDialog->CalcTextRect( pwszIndicator, pElement, &rcCalc );
     m_pDialog->DrawText( pwszIndicator, pElement, &rc );
@@ -907,7 +919,7 @@ void CDXUTIMEEditBox::RenderIndicator( float fElapsedTime )
 
 
 //--------------------------------------------------------------------------------------
-void CDXUTIMEEditBox::Render( float fElapsedTime )
+void CDXUTIMEEditBox::Render( _In_ float fElapsedTime )
 {
     if( m_bVisible == false )
         return;
@@ -920,7 +932,7 @@ void CDXUTIMEEditBox::Render( float fElapsedTime )
         {
             0, 0, 0, 0
         };
-        m_pDialog->CalcTextRect( L"En", m_Elements.GetAt( 9 ), &rc );
+        m_pDialog->CalcTextRect( L"En", m_Elements[ 9 ], &rc );
         m_nIndicatorWidth = rc.right - rc.left;
 
         // Update the rectangles now that we have the indicator's width
@@ -930,7 +942,7 @@ void CDXUTIMEEditBox::Render( float fElapsedTime )
     // Let the parent render first (edit control)
     CDXUTEditBox::Render( fElapsedTime );
 
-    CDXUTElement* pElement = GetElement( 1 );
+    auto pElement = GetElement( 1 );
     if( pElement )
     {
         s_CompString.SetFontNode( m_pDialog->GetFont( pElement->iFont ) );
@@ -951,35 +963,35 @@ void CDXUTIMEEditBox::Render( float fElapsedTime )
         // Display the composition string.
         // This method should also update s_ptCompString
         // for RenderCandidateReadingWindow.
-        RenderComposition( fElapsedTime );
+        RenderComposition();
 
         // Display the reading/candidate window. RenderCandidateReadingWindow()
         // uses s_ptCompString to position itself.  s_ptCompString must have
         // been filled in by RenderComposition().
         if( ImeUi_IsShowReadingWindow() )
             // Reading window
-            RenderCandidateReadingWindow( fElapsedTime, true );
+            RenderCandidateReadingWindow( true );
         else if( ImeUi_IsShowCandListWindow() )
             // Candidate list window
-            RenderCandidateReadingWindow( fElapsedTime, false );
+            RenderCandidateReadingWindow( false );
     }
 }
 
 
 //--------------------------------------------------------------------------------------
-void CDXUTIMEEditBox::SetImeEnableFlag( bool bFlag )
+void CDXUTIMEEditBox::SetImeEnableFlag( _In_ bool bFlag )
 {
     s_bImeFlag = bFlag;
 }
 
 
 //--------------------------------------------------------------------------------------
-void CDXUTIMEEditBox::Initialize( HWND hWnd )
+void CDXUTIMEEditBox::Initialize( _In_ HWND hWnd )
 {
-    ImeUiCallback_DrawRect = NULL;
+    ImeUiCallback_DrawRect = nullptr;
     ImeUiCallback_Malloc = malloc;
     ImeUiCallback_Free = free;
-    ImeUiCallback_DrawFans = NULL;
+    ImeUiCallback_DrawFans = nullptr;
 
     ImeUi_Initialize( hWnd );
 	

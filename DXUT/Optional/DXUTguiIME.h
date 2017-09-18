@@ -1,16 +1,20 @@
 //--------------------------------------------------------------------------------------
 // File: DXUTguiIME.h
 //
+// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
+// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+// PARTICULAR PURPOSE.
+//
 // Copyright (c) Microsoft Corporation. All rights reserved.
+//
+// http://go.microsoft.com/fwlink/?LinkId=320437
 //--------------------------------------------------------------------------------------
 #pragma once
-#ifndef DXUT_IME_H
-#define DXUT_IME_H
 
 #include <usp10.h>
 #include <dimm.h>
 #include "ImeUi.h"
-
 
 //--------------------------------------------------------------------------------------
 // Forward declarations
@@ -28,37 +32,37 @@ class CDXUTIMEEditBox : public CDXUTEditBox
 {
 public:
 
-    static HRESULT          CreateIMEEditBox( CDXUTDialog* pDialog, int ID, LPCWSTR strText, int x, int y, int width,
-                                              int height, bool bIsDefault=false, CDXUTIMEEditBox** ppCreated=NULL );
+    static HRESULT CreateIMEEditBox( _In_ CDXUTDialog* pDialog, _In_ int ID, _In_z_ LPCWSTR strText, _In_ int x, _In_ int y, _In_ int width,
+                                     _In_ int height, _In_ bool bIsDefault=false, _Outptr_opt_ CDXUTIMEEditBox** ppCreated=nullptr );
 
-                            CDXUTIMEEditBox( CDXUTDialog* pDialog = NULL );
-    virtual                 ~CDXUTIMEEditBox();
+    CDXUTIMEEditBox( _In_opt_ CDXUTDialog* pDialog = nullptr );
+    virtual ~CDXUTIMEEditBox();
 
-    static void             InitDefaultElements( CDXUTDialog* pDialog );
+    static void InitDefaultElements( _In_ CDXUTDialog* pDialog );
 
-    static void WINAPI      Initialize( HWND hWnd );
-    static void WINAPI      Uninitialize();
+    static void WINAPI Initialize( _In_ HWND hWnd );
+    static void WINAPI Uninitialize();
 
     static  HRESULT WINAPI  StaticOnCreateDevice();
-    static  bool WINAPI     StaticMsgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
+    static  bool WINAPI     StaticMsgProc( _In_ HWND hWnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam );
 
-    static  void WINAPI     SetImeEnableFlag( bool bFlag );
+    static  void WINAPI     SetImeEnableFlag( _In_ bool bFlag );
 
-    virtual void            Render( float fElapsedTime );
-    virtual bool            MsgProc( UINT uMsg, WPARAM wParam, LPARAM lParam );
-    virtual bool            HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lParam );
-    virtual void            UpdateRects();
-    virtual void            OnFocusIn();
-    virtual void            OnFocusOut();
+    virtual void Render( _In_ float fElapsedTime ) override;
+    virtual bool MsgProc( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual bool HandleMouse( _In_ UINT uMsg, _In_ const POINT& pt, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual void UpdateRects() override;
+    virtual void OnFocusIn() override;
+    virtual void OnFocusOut() override;
 
-    void                    PumpMessage();
+    void PumpMessage();
 
-    virtual void            RenderCandidateReadingWindow( float fElapsedTime, bool bReading );
-    virtual void            RenderComposition( float fElapsedTime );
-    virtual void            RenderIndicator( float fElapsedTime );
+    virtual void RenderCandidateReadingWindow( _In_ bool bReading );
+    virtual void RenderComposition();
+    virtual void RenderIndicator( _In_ float fElapsedTime );
 
 protected:
-    static void WINAPI      EnableImeSystem( bool bEnable );
+    static void WINAPI      EnableImeSystem( _In_ bool bEnable );
 
     static WORD WINAPI      GetLanguage()
     {
@@ -68,8 +72,8 @@ protected:
     {
         return ImeUi_GetPrimaryLanguage();
     }
-    static void WINAPI      SendKey( BYTE nVirtKey );
-    static DWORD WINAPI     GetImeId( UINT uIndex = 0 )
+    static void WINAPI      SendKey( _In_ BYTE nVirtKey );
+    static DWORD WINAPI     GetImeId( _In_ UINT uIndex = 0 )
     {
         return ImeUi_GetImeId( uIndex );
     };
@@ -108,24 +112,24 @@ protected:
     static bool s_bImeFlag;			  // Is ime enabled 
 	
     // Color of various IME elements
-    D3DCOLOR m_ReadingColor;        // Reading string color
-    D3DCOLOR m_ReadingWinColor;     // Reading window color
-    D3DCOLOR m_ReadingSelColor;     // Selected character in reading string
-    D3DCOLOR m_ReadingSelBkColor;   // Background color for selected char in reading str
-    D3DCOLOR m_CandidateColor;      // Candidate string color
-    D3DCOLOR m_CandidateWinColor;   // Candidate window color
-    D3DCOLOR m_CandidateSelColor;   // Selected candidate string color
-    D3DCOLOR m_CandidateSelBkColor; // Selected candidate background color
-    D3DCOLOR m_CompColor;           // Composition string color
-    D3DCOLOR m_CompWinColor;        // Composition string window color
-    D3DCOLOR m_CompCaretColor;      // Composition string caret color
-    D3DCOLOR m_CompTargetColor;     // Composition string target converted color
-    D3DCOLOR m_CompTargetBkColor;   // Composition string target converted background
-    D3DCOLOR m_CompTargetNonColor;  // Composition string target non-converted color
-    D3DCOLOR m_CompTargetNonBkColor;// Composition string target non-converted background
-    D3DCOLOR m_IndicatorImeColor;   // Indicator text color for IME
-    D3DCOLOR m_IndicatorEngColor;   // Indicator text color for English
-    D3DCOLOR m_IndicatorBkColor;    // Indicator text background color
+    DWORD m_ReadingColor;        // Reading string color
+    DWORD m_ReadingWinColor;     // Reading window color
+    DWORD m_ReadingSelColor;     // Selected character in reading string
+    DWORD m_ReadingSelBkColor;   // Background color for selected char in reading str
+    DWORD m_CandidateColor;      // Candidate string color
+    DWORD m_CandidateWinColor;   // Candidate window color
+    DWORD m_CandidateSelColor;   // Selected candidate string color
+    DWORD m_CandidateSelBkColor; // Selected candidate background color
+    DWORD m_CompColor;           // Composition string color
+    DWORD m_CompWinColor;        // Composition string window color
+    DWORD m_CompCaretColor;      // Composition string caret color
+    DWORD m_CompTargetColor;     // Composition string target converted color
+    DWORD m_CompTargetBkColor;   // Composition string target converted background
+    DWORD m_CompTargetNonColor;  // Composition string target non-converted color
+    DWORD m_CompTargetNonBkColor;// Composition string target non-converted background
+    DWORD m_IndicatorImeColor;   // Indicator text color for IME
+    DWORD m_IndicatorEngColor;   // Indicator text color for English
+    DWORD m_IndicatorBkColor;    // Indicator text background color
 
     // Edit-control-specific data
     int m_nIndicatorWidth;     // Width of the indicator symbol
@@ -135,7 +139,3 @@ protected:
     static bool    m_bIMEStaticMsgProcCalled;
 #endif
 };
-
-
-
-#endif // DXUT_IME_H
