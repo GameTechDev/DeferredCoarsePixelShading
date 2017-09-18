@@ -1,10 +1,19 @@
 //----------------------------------------------------------------------------
 // File: DXUTRes.cpp
 //
-// Copyright (c) Microsoft Corp. All rights reserved.
+// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
+// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+// PARTICULAR PURPOSE.
+//
+// Copyright (c) Microsoft Corporation. All rights reserved.
+//
+// http://go.microsoft.com/fwlink/?LinkId=320437
 //-----------------------------------------------------------------------------
 #include "DXUT.h"
 #include "DXUTres.h"
+
+#include "DDSTextureLoader.h"
 
 static const DWORD g_DXUTGUITextureSrcData[] =
 {
@@ -8283,57 +8292,24 @@ static const DWORD g_DXUTArrowMeshSrcData[] =
 
 static const UINT g_DXUTArrowMeshSrcDataSizeInBytes = 2193;
 
-//-----------------------------------------------------------------------------
-HRESULT WINAPI DXUTCreateGUITextureFromInternalArray9( LPDIRECT3DDEVICE9 pd3dDevice, IDirect3DTexture9** ppTexture, D3DXIMAGE_INFO* pInfo )
-{
-    return D3DXCreateTextureFromFileInMemoryEx( pd3dDevice, g_DXUTGUITextureSrcData, g_DXUTGUITextureSrcDataSizeInBytes, 
-                                                D3DX_DEFAULT, D3DX_DEFAULT, 1, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, 
-                                                D3DX_DEFAULT, D3DX_DEFAULT, 0, pInfo, NULL, ppTexture );
-}
-
 //--------------------------------------------------------------------------------------
-HRESULT WINAPI DXUTCreateGUITextureFromInternalArray11(ID3D11Device* pd3dDevice, ID3D11Texture2D** ppTexture, D3DX11_IMAGE_INFO* pInfo)
+_Use_decl_annotations_
+HRESULT WINAPI DXUTCreateGUITextureFromInternalArray(ID3D11Device* pd3dDevice, ID3D11Texture2D** ppTexture)
 {
-    HRESULT hr;
+    if ( !ppTexture )
+        return E_INVALIDARG;
 
-    D3DX11_IMAGE_INFO SrcInfo;
-    if( !pInfo )
-    {
-        D3DX11GetImageInfoFromMemory( g_DXUTGUITextureSrcData, g_DXUTGUITextureSrcDataSizeInBytes, NULL, &SrcInfo, NULL );
-        pInfo = &SrcInfo;
-    }
-
-    ID3D11Resource *pRes;
-    D3DX11_IMAGE_LOAD_INFO loadInfo;
-    loadInfo.Width = D3DX11_DEFAULT;
-    loadInfo.Height  = D3DX11_DEFAULT;
-    loadInfo.Depth  = D3DX11_DEFAULT;
-    loadInfo.FirstMipLevel = 0;
-    loadInfo.MipLevels = 1;
-    loadInfo.Usage = D3D11_USAGE_DEFAULT;
-    loadInfo.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    loadInfo.CpuAccessFlags = 0;
-    loadInfo.MiscFlags = 0;
-    //loadInfo.Format = MAKE_TYPELESS( pInfo->Format );
-    loadInfo.Format = MAKE_SRGB( pInfo->Format );
-    loadInfo.Filter = D3DX11_FILTER_NONE;
-    loadInfo.MipFilter = D3DX11_FILTER_NONE;
-    loadInfo.pSrcInfo = pInfo;
-
-    hr = D3DX11CreateTextureFromMemory( pd3dDevice, g_DXUTGUITextureSrcData, g_DXUTGUITextureSrcDataSizeInBytes, &loadInfo, NULL, &pRes, NULL );
-    if( FAILED( hr ) )
+    ID3D11Resource *pRes = nullptr;
+    HRESULT hr = DirectX::CreateDDSTextureFromMemory( pd3dDevice,
+                                    reinterpret_cast<const uint8_t*>(g_DXUTGUITextureSrcData), g_DXUTGUITextureSrcDataSizeInBytes,
+                                    &pRes, nullptr ); 
+    if ( FAILED(hr) )
         return hr;
+
     DXUT_SetDebugName( pRes, "DXUT" );
+
     hr = pRes->QueryInterface( __uuidof( ID3D11Texture2D ), (LPVOID*)ppTexture );
     SAFE_RELEASE( pRes );
 
-    return S_OK;
+    return hr;
 }
-
-//-----------------------------------------------------------------------------
-HRESULT WINAPI DXUTCreateArrowMeshFromInternalArray( LPDIRECT3DDEVICE9 pd3dDevice, ID3DXMesh** ppMesh )
-{
-    return D3DXLoadMeshFromXInMemory( g_DXUTArrowMeshSrcData, g_DXUTArrowMeshSrcDataSizeInBytes, 
-                                      D3DXMESH_MANAGED, pd3dDevice, NULL, NULL, NULL, NULL, ppMesh );
-}
-

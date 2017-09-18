@@ -1,20 +1,32 @@
 //--------------------------------------------------------------------------------------
 // File: DXUTcamera.cpp
 //
-// Copyright (c) Microsoft Corporation. All rights reserved
+// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
+// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+// PARTICULAR PURPOSE.
+//
+// Copyright (c) Microsoft Corporation. All rights reserved.
+//
+// http://go.microsoft.com/fwlink/?LinkId=320437
 //--------------------------------------------------------------------------------------
 #include "DXUT.h"
 #include "DXUTcamera.h"
 #include "DXUTres.h"
-#undef min // use __min instead
-#undef max // use __max instead
+
+using namespace DirectX;
+
+//======================================================================================
+// CD3DArcBall
+//======================================================================================
 
 //--------------------------------------------------------------------------------------
 CD3DArcBall::CD3DArcBall()
 {
     Reset();
-    m_vDownPt = D3DXVECTOR3( 0, 0, 0 );
-    m_vCurrentPt = D3DXVECTOR3( 0, 0, 0 );
+
+    m_vDownPt = XMFLOAT3( 0, 0, 0 );
+    m_vCurrentPt = XMFLOAT3( 0, 0, 0 );
     m_Offset.x = m_Offset.y = 0;
 
     RECT rc;
@@ -23,66 +35,26 @@ CD3DArcBall::CD3DArcBall()
 }
 
 
-
-
-
 //--------------------------------------------------------------------------------------
 void CD3DArcBall::Reset()
 {
-    D3DXQuaternionIdentity( &m_qDown );
-    D3DXQuaternionIdentity( &m_qNow );
-    D3DXMatrixIdentity( &m_mRotation );
-    D3DXMatrixIdentity( &m_mTranslation );
-    D3DXMatrixIdentity( &m_mTranslationDelta );
-    m_bDrag = FALSE;
+    XMVECTOR qid = XMQuaternionIdentity();
+    XMStoreFloat4( &m_qDown, qid );
+    XMStoreFloat4( &m_qNow, qid );
+
+    XMMATRIX id = XMMatrixIdentity();
+    XMStoreFloat4x4( &m_mRotation, id );
+    XMStoreFloat4x4( &m_mTranslation, id );
+    XMStoreFloat4x4( &m_mTranslationDelta, id );
+
+    m_bDrag = false;
     m_fRadiusTranslation = 1.0f;
     m_fRadius = 1.0f;
 }
 
 
-
-
 //--------------------------------------------------------------------------------------
-D3DXVECTOR3 CD3DArcBall::ScreenToVector( float fScreenPtX, float fScreenPtY )
-{
-    // Scale to screen
-    FLOAT x = -( fScreenPtX - m_Offset.x - m_nWidth / 2 ) / ( m_fRadius * m_nWidth / 2 );
-    FLOAT y = ( fScreenPtY - m_Offset.y - m_nHeight / 2 ) / ( m_fRadius * m_nHeight / 2 );
-
-    FLOAT z = 0.0f;
-    FLOAT mag = x * x + y * y;
-
-    if( mag > 1.0f )
-    {
-        FLOAT scale = 1.0f / sqrtf( mag );
-        x *= scale;
-        y *= scale;
-    }
-    else
-        z = sqrtf( 1.0f - mag );
-
-    // Return vector
-    return D3DXVECTOR3( x, y, z );
-}
-
-
-
-
-//--------------------------------------------------------------------------------------
-D3DXQUATERNION CD3DArcBall::QuatFromBallPoints( const D3DXVECTOR3& vFrom, const D3DXVECTOR3& vTo )
-{
-    D3DXVECTOR3 vPart;
-    float fDot = D3DXVec3Dot( &vFrom, &vTo );
-    D3DXVec3Cross( &vPart, &vFrom, &vTo );
-
-    return D3DXQUATERNION( vPart.x, vPart.y, vPart.z, fDot );
-}
-
-
-
-
-//--------------------------------------------------------------------------------------
-void CD3DArcBall::OnBegin( int nX, int nY )
+void CD3DArcBall::OnBegin( _In_ int nX, _In_ int nY )
 {
     // Only enter the drag state if the click falls
     // inside the click rectangle.
@@ -93,24 +65,27 @@ void CD3DArcBall::OnBegin( int nX, int nY )
     {
         m_bDrag = true;
         m_qDown = m_qNow;
-        m_vDownPt = ScreenToVector( ( float )nX, ( float )nY );
+        XMVECTOR v = ScreenToVector( float(nX), float(nY) );
+        XMStoreFloat3( &m_vDownPt, v );
     }
 }
-
-
 
 
 //--------------------------------------------------------------------------------------
-void CD3DArcBall::OnMove( int nX, int nY )
+void CD3DArcBall::OnMove( _In_ int nX, _In_ int nY )
 {
     if( m_bDrag )
     {
-        m_vCurrentPt = ScreenToVector( ( float )nX, ( float )nY );
-        m_qNow = m_qDown * QuatFromBallPoints( m_vDownPt, m_vCurrentPt );
+        XMVECTOR curr = ScreenToVector( ( float )nX, ( float )nY ); 
+        XMStoreFloat3( &m_vCurrentPt, curr );
+
+        XMVECTOR down = XMLoadFloat3( &m_vDownPt );
+        XMVECTOR qdown = XMLoadFloat4( &m_qDown );
+
+        XMVECTOR result = XMQuaternionMultiply( qdown, QuatFromBallPoints( down, curr ) );
+        XMStoreFloat4( &m_qNow, result );
     }
 }
-
-
 
 
 //--------------------------------------------------------------------------------------
@@ -120,11 +95,8 @@ void CD3DArcBall::OnEnd()
 }
 
 
-
-
 //--------------------------------------------------------------------------------------
-// Desc:
-//--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 LRESULT CD3DArcBall::HandleMessages( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
     // Current mouse position
@@ -174,19 +146,24 @@ LRESULT CD3DArcBall::HandleMessages( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
             else if( ( MK_RBUTTON & wParam ) || ( MK_MBUTTON & wParam ) )
             {
                 // Normalize based on size of window and bounding sphere radius
-                FLOAT fDeltaX = ( m_ptLastMouse.x - iMouseX ) * m_fRadiusTranslation / m_nWidth;
-                FLOAT fDeltaY = ( m_ptLastMouse.y - iMouseY ) * m_fRadiusTranslation / m_nHeight;
+                float fDeltaX = ( m_ptLastMouse.x - iMouseX ) * m_fRadiusTranslation / m_nWidth;
+                float fDeltaY = ( m_ptLastMouse.y - iMouseY ) * m_fRadiusTranslation / m_nHeight;
 
+                XMMATRIX mTranslationDelta;
+                XMMATRIX mTranslation = XMLoadFloat4x4( &m_mTranslation );
                 if( wParam & MK_RBUTTON )
                 {
-                    D3DXMatrixTranslation( &m_mTranslationDelta, -2 * fDeltaX, 2 * fDeltaY, 0.0f );
-                    D3DXMatrixMultiply( &m_mTranslation, &m_mTranslation, &m_mTranslationDelta );
+                    mTranslationDelta = XMMatrixTranslation( -2 * fDeltaX, 2 * fDeltaY, 0.0f );
+                    mTranslation = XMMatrixMultiply( mTranslation, mTranslationDelta );
                 }
                 else  // wParam & MK_MBUTTON
                 {
-                    D3DXMatrixTranslation( &m_mTranslationDelta, 0.0f, 0.0f, 5 * fDeltaY );
-                    D3DXMatrixMultiply( &m_mTranslation, &m_mTranslation, &m_mTranslationDelta );
+                    mTranslationDelta = XMMatrixTranslation( 0.0f, 0.0f, 5 * fDeltaY );
+                    mTranslation = XMMatrixMultiply( mTranslation, mTranslationDelta );
                 }
+
+                XMStoreFloat4x4( &m_mTranslationDelta, mTranslationDelta );
+                XMStoreFloat4x4( &m_mTranslation, mTranslation );
 
                 // Store mouse coordinate
                 m_ptLastMouse.x = iMouseX;
@@ -199,99 +176,92 @@ LRESULT CD3DArcBall::HandleMessages( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 }
 
 
-
+//======================================================================================
+// CBaseCamera
+//======================================================================================
 
 //--------------------------------------------------------------------------------------
 // Constructor
 //--------------------------------------------------------------------------------------
-CBaseCamera::CBaseCamera()
+CBaseCamera::CBaseCamera() :
+    m_cKeysDown(0),
+    m_nCurrentButtonMask(0),
+    m_nMouseWheelDelta(0),
+    m_fFramesToSmoothMouseData(2.0f),
+    m_fCameraYawAngle(0.0f),
+    m_fCameraPitchAngle(0.0f),
+    m_fDragTimer(0.0f),
+    m_fTotalDragTimeToZero(0.25),
+    m_fRotationScaler(0.01f),
+    m_fMoveScaler(5.0f),
+    m_bMouseLButtonDown(false),
+    m_bMouseMButtonDown(false),
+    m_bMouseRButtonDown(false),
+    m_bMovementDrag(false),
+    m_bInvertPitch(false),
+    m_bEnablePositionMovement(true),
+    m_bEnableYAxisMovement(true),
+    m_bClipToBoundary(false),
+    m_bResetCursorAfterMove(false)
 {
-    m_cKeysDown = 0;
     ZeroMemory( m_aKeys, sizeof( BYTE ) * CAM_MAX_KEYS );
     ZeroMemory( m_GamePad, sizeof( DXUT_GAMEPAD ) * DXUT_MAX_CONTROLLERS );
 
-    // Set attributes for the view matrix
-    D3DXVECTOR3 vEyePt = D3DXVECTOR3( 0.0f, 0.0f, 0.0f );
-    D3DXVECTOR3 vLookatPt = D3DXVECTOR3( 0.0f, 0.0f, 1.0f );
-
     // Setup the view matrix
-    SetViewParams( &vEyePt, &vLookatPt );
+    SetViewParams( g_XMZero, g_XMIdentityR2 );
 
     // Setup the projection matrix
-    SetProjParams( D3DX_PI / 4, 1.0f, 1.0f, 1000.0f );
+    SetProjParams( XM_PI / 4, 1.0f, 1.0f, 1000.0f );
 
     GetCursorPos( &m_ptLastMousePosition );
-    m_bMouseLButtonDown = false;
-    m_bMouseMButtonDown = false;
-    m_bMouseRButtonDown = false;
-    m_nCurrentButtonMask = 0;
-    m_nMouseWheelDelta = 0;
-
-    m_fCameraYawAngle = 0.0f;
-    m_fCameraPitchAngle = 0.0f;
-
+    
     SetRect( &m_rcDrag, LONG_MIN, LONG_MIN, LONG_MAX, LONG_MAX );
-    m_vVelocity = D3DXVECTOR3( 0, 0, 0 );
-    m_bMovementDrag = false;
-    m_vVelocityDrag = D3DXVECTOR3( 0, 0, 0 );
-    m_fDragTimer = 0.0f;
-    m_fTotalDragTimeToZero = 0.25;
-    m_vRotVelocity = D3DXVECTOR2( 0, 0 );
+    m_vVelocity = XMFLOAT3( 0, 0, 0 );
+    m_vVelocityDrag = XMFLOAT3( 0, 0, 0 );
+    m_vRotVelocity = XMFLOAT2( 0, 0 );
 
-    m_fRotationScaler = 0.01f;
-    m_fMoveScaler = 5.0f;
+    m_vMouseDelta = XMFLOAT2( 0, 0 );
 
-    m_bInvertPitch = false;
-    m_bEnableYAxisMovement = true;
-    m_bEnablePositionMovement = true;
-
-    m_vMouseDelta = D3DXVECTOR2( 0, 0 );
-    m_fFramesToSmoothMouseData = 2.0f;
-
-    m_bClipToBoundary = false;
-    m_vMinBoundary = D3DXVECTOR3( -1, -1, -1 );
-    m_vMaxBoundary = D3DXVECTOR3( 1, 1, 1 );
-
-    m_bResetCursorAfterMove = false;
+    m_vMinBoundary = XMFLOAT3( -1, -1, -1 );
+    m_vMaxBoundary = XMFLOAT3( 1, 1, 1 );
 }
 
 
 //--------------------------------------------------------------------------------------
 // Client can call this to change the position and direction of camera
 //--------------------------------------------------------------------------------------
-VOID CBaseCamera::SetViewParams( D3DXVECTOR3* pvEyePt, D3DXVECTOR3* pvLookatPt )
+_Use_decl_annotations_
+void CBaseCamera::SetViewParams( FXMVECTOR vEyePt, FXMVECTOR vLookatPt )
 {
-    if( NULL == pvEyePt || NULL == pvLookatPt )
-        return;
+    XMStoreFloat3( &m_vEye, vEyePt );
+    XMStoreFloat3( &m_vDefaultEye, vEyePt );
 
-    m_vDefaultEye = m_vEye = *pvEyePt;
-    m_vDefaultLookAt = m_vLookAt = *pvLookatPt;
+    XMStoreFloat3( &m_vLookAt, vLookatPt );
+    XMStoreFloat3( &m_vDefaultLookAt , vLookatPt );
 
     // Calc the view matrix
-    D3DXVECTOR3 vUp( 0,1,0 );
-    D3DXMatrixLookAtLH( &m_mView, pvEyePt, pvLookatPt, &vUp );
+    XMMATRIX mView = XMMatrixLookAtLH( vEyePt, vLookatPt, g_XMIdentityR1 );
+    XMStoreFloat4x4( &m_mView, mView );
 
-    D3DXMATRIX mInvView;
-    D3DXMatrixInverse( &mInvView, NULL, &m_mView );
+    XMMATRIX mInvView = XMMatrixInverse( nullptr, mView );
 
     // The axis basis vectors and camera position are stored inside the 
     // position matrix in the 4 rows of the camera's world matrix.
     // To figure out the yaw/pitch of the camera, we just need the Z basis vector
-    D3DXVECTOR3* pZBasis = ( D3DXVECTOR3* )&mInvView._31;
+    XMFLOAT3 zBasis;
+    XMStoreFloat3( &zBasis, mInvView.r[2] );
 
-    m_fCameraYawAngle = atan2f( pZBasis->x, pZBasis->z );
-    float fLen = sqrtf( pZBasis->z * pZBasis->z + pZBasis->x * pZBasis->x );
-    m_fCameraPitchAngle = -atan2f( pZBasis->y, fLen );
+    m_fCameraYawAngle = atan2f( zBasis.x, zBasis.z );
+    float fLen = sqrtf( zBasis.z * zBasis.z + zBasis.x * zBasis.x );
+    m_fCameraPitchAngle = -atan2f( zBasis.y, fLen );
 }
-
-
 
 
 //--------------------------------------------------------------------------------------
 // Calculates the projection matrix based on input params
 //--------------------------------------------------------------------------------------
-VOID CBaseCamera::SetProjParams( FLOAT fFOV, FLOAT fAspect, FLOAT fNearPlane,
-                                 FLOAT fFarPlane )
+_Use_decl_annotations_
+void CBaseCamera::SetProjParams( float fFOV, float fAspect, float fNearPlane, float fFarPlane )
 {
     // Set attributes for the projection matrix
     m_fFOV = fFOV;
@@ -299,15 +269,15 @@ VOID CBaseCamera::SetProjParams( FLOAT fFOV, FLOAT fAspect, FLOAT fNearPlane,
     m_fNearPlane = fNearPlane;
     m_fFarPlane = fFarPlane;
 
-    D3DXMatrixPerspectiveFovLH( &m_mProj, fFOV, fAspect, fNearPlane, fFarPlane );
+    XMMATRIX mProj = XMMatrixPerspectiveFovLH( fFOV, fAspect, fNearPlane, fFarPlane );
+    XMStoreFloat4x4( &m_mProj, mProj );
 }
-
-
 
 
 //--------------------------------------------------------------------------------------
 // Call this from your message proc so this class can handle window messages
 //--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 LRESULT CBaseCamera::HandleMessages( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
     UNREFERENCED_PARAMETER( hWnd );
@@ -323,6 +293,7 @@ LRESULT CBaseCamera::HandleMessages( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
             D3DUtil_CameraKeys mappedKey = MapKey( ( UINT )wParam );
             if( mappedKey != CAM_UNKNOWN )
             {
+                _Analysis_assume_( mappedKey < CAM_MAX_KEYS );
                 if( FALSE == IsKeyDown( m_aKeys[mappedKey] ) )
                 {
                     m_aKeys[ mappedKey ] = KEY_WAS_DOWN_MASK | KEY_IS_DOWN_MASK;
@@ -436,13 +407,14 @@ LRESULT CBaseCamera::HandleMessages( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
     return FALSE;
 }
 
+
 //--------------------------------------------------------------------------------------
 // Figure out the velocity based on keyboard input & drag if any
 //--------------------------------------------------------------------------------------
-void CBaseCamera::GetInput( bool bGetKeyboardInput, bool bGetMouseInput, bool bGetGamepadInput,
-                            bool bResetCursorAfterMove )
+_Use_decl_annotations_
+void CBaseCamera::GetInput( bool bGetKeyboardInput, bool bGetMouseInput, bool bGetGamepadInput )
 {
-    m_vKeyboardDirection = D3DXVECTOR3( 0, 0, 0 );
+    m_vKeyboardDirection = XMFLOAT3( 0, 0, 0 );
     if( bGetKeyboardInput )
     {
         // Update acceleration vector based on keyboard state
@@ -470,8 +442,8 @@ void CBaseCamera::GetInput( bool bGetKeyboardInput, bool bGetMouseInput, bool bG
 
     if( bGetGamepadInput )
     {
-        m_vGamePadLeftThumb = D3DXVECTOR3( 0, 0, 0 );
-        m_vGamePadRightThumb = D3DXVECTOR3( 0, 0, 0 );
+        m_vGamePadLeftThumb = XMFLOAT3( 0, 0, 0 );
+        m_vGamePadRightThumb = XMFLOAT3( 0, 0, 0 );
 
         // Get controller state
         for( DWORD iUserIndex = 0; iUserIndex < DXUT_MAX_CONTROLLERS; iUserIndex++ )
@@ -480,7 +452,7 @@ void CBaseCamera::GetInput( bool bGetKeyboardInput, bool bGetMouseInput, bool bG
 
             // Mark time if the controller is in a non-zero state
             if( m_GamePad[iUserIndex].wButtons ||
-                m_GamePad[iUserIndex].sThumbLX || m_GamePad[iUserIndex].sThumbLX ||
+                m_GamePad[iUserIndex].sThumbLX || m_GamePad[iUserIndex].sThumbLY ||
                 m_GamePad[iUserIndex].sThumbRX || m_GamePad[iUserIndex].sThumbRY ||
                 m_GamePad[iUserIndex].bLeftTrigger || m_GamePad[iUserIndex].bRightTrigger )
             {
@@ -520,13 +492,12 @@ void CBaseCamera::GetInput( bool bGetKeyboardInput, bool bGetMouseInput, bool bG
 //--------------------------------------------------------------------------------------
 void CBaseCamera::UpdateMouseDelta()
 {
-    POINT ptCurMouseDelta;
-    POINT ptCurMousePos;
-
     // Get current position of mouse
+    POINT ptCurMousePos;
     GetCursorPos( &ptCurMousePos );
 
     // Calc how far it's moved since last frame
+    POINT ptCurMouseDelta;
     ptCurMouseDelta.x = ptCurMousePos.x - m_ptLastMousePosition.x;
     ptCurMouseDelta.y = ptCurMousePos.y - m_ptLastMousePosition.y;
 
@@ -559,26 +530,30 @@ void CBaseCamera::UpdateMouseDelta()
     m_vMouseDelta.x = m_vMouseDelta.x * fPercentOfOld + ptCurMouseDelta.x * fPercentOfNew;
     m_vMouseDelta.y = m_vMouseDelta.y * fPercentOfOld + ptCurMouseDelta.y * fPercentOfNew;
 
-    m_vRotVelocity = m_vMouseDelta * m_fRotationScaler;
+    m_vRotVelocity.x = m_vMouseDelta.x * m_fRotationScaler;
+    m_vRotVelocity.y = m_vMouseDelta.y * m_fRotationScaler;
 }
-
-
 
 
 //--------------------------------------------------------------------------------------
 // Figure out the velocity based on keyboard input & drag if any
 //--------------------------------------------------------------------------------------
-void CBaseCamera::UpdateVelocity( float fElapsedTime )
+void CBaseCamera::UpdateVelocity( _In_ float fElapsedTime )
 {
-    D3DXMATRIX mRotDelta;
-    D3DXVECTOR2 vGamePadRightThumb = D3DXVECTOR2( m_vGamePadRightThumb.x, -m_vGamePadRightThumb.z );
-    m_vRotVelocity = m_vMouseDelta * m_fRotationScaler + vGamePadRightThumb * 0.02f;
+    XMVECTOR vGamePadRightThumb = XMVectorSet( m_vGamePadRightThumb.x, -m_vGamePadRightThumb.z, 0, 0 );
 
-    D3DXVECTOR3 vAccel = m_vKeyboardDirection + m_vGamePadLeftThumb;
+    XMVECTOR vMouseDelta = XMLoadFloat2( &m_vMouseDelta );
+    XMVECTOR vRotVelocity = vMouseDelta * m_fRotationScaler + vGamePadRightThumb * 0.02f;
+
+    XMStoreFloat2( &m_vRotVelocity, vRotVelocity );
+    
+    XMVECTOR vKeyboardDirection = XMLoadFloat3( &m_vKeyboardDirection );
+    XMVECTOR vGamePadLeftThumb = XMLoadFloat3( &m_vGamePadLeftThumb );
+    XMVECTOR vAccel = vKeyboardDirection + vGamePadLeftThumb;
 
     // Normalize vector so if moving 2 dirs (left & forward), 
     // the camera doesn't move faster than if moving in 1 dir
-    D3DXVec3Normalize( &vAccel, &vAccel );
+    vAccel = XMVector3Normalize( vAccel );
 
     // Scale the acceleration vector
     vAccel *= m_fMoveScaler;
@@ -586,15 +561,17 @@ void CBaseCamera::UpdateVelocity( float fElapsedTime )
     if( m_bMovementDrag )
     {
         // Is there any acceleration this frame?
-        if( D3DXVec3LengthSq( &vAccel ) > 0 )
+        if( XMVectorGetX( XMVector3LengthSq( vAccel ) ) > 0 )
         {
-            // If so, then this means the user has pressed a movement key\
+            // If so, then this means the user has pressed a movement key
             // so change the velocity immediately to acceleration 
             // upon keyboard input.  This isn't normal physics
             // but it will give a quick response to keyboard input
-            m_vVelocity = vAccel;
+            XMStoreFloat3( &m_vVelocity, vAccel );
+
             m_fDragTimer = m_fTotalDragTimeToZero;
-            m_vVelocityDrag = vAccel / m_fDragTimer;
+            
+            XMStoreFloat3( &m_vVelocityDrag, vAccel / m_fDragTimer );
         }
         else
         {
@@ -602,48 +579,34 @@ void CBaseCamera::UpdateVelocity( float fElapsedTime )
             if( m_fDragTimer > 0 )
             {
                 // Drag until timer is <= 0
-                m_vVelocity -= m_vVelocityDrag * fElapsedTime;
+                XMVECTOR vVelocity = XMLoadFloat3( &m_vVelocity );
+                XMVECTOR vVelocityDrag = XMLoadFloat3( &m_vVelocityDrag );
+
+                vVelocity -= vVelocityDrag * fElapsedTime;
+
+                XMStoreFloat3( &m_vVelocity, vVelocity );
+
                 m_fDragTimer -= fElapsedTime;
             }
             else
             {
                 // Zero velocity
-                m_vVelocity = D3DXVECTOR3( 0, 0, 0 );
+                m_vVelocity = XMFLOAT3( 0, 0, 0 );
             }
         }
     }
     else
     {
         // No drag, so immediately change the velocity
-        m_vVelocity = vAccel;
+        XMStoreFloat3( &m_vVelocity, vAccel );
     }
 }
-
-
-
-
-//--------------------------------------------------------------------------------------
-// Clamps pV to lie inside m_vMinBoundary & m_vMaxBoundary
-//--------------------------------------------------------------------------------------
-void CBaseCamera::ConstrainToBoundary( D3DXVECTOR3* pV )
-{
-    // Constrain vector to a bounding box 
-    pV->x = __max( pV->x, m_vMinBoundary.x );
-    pV->y = __max( pV->y, m_vMinBoundary.y );
-    pV->z = __max( pV->z, m_vMinBoundary.z );
-
-    pV->x = __min( pV->x, m_vMaxBoundary.x );
-    pV->y = __min( pV->y, m_vMaxBoundary.y );
-    pV->z = __min( pV->z, m_vMaxBoundary.z );
-}
-
-
 
 
 //--------------------------------------------------------------------------------------
 // Maps a windows virtual key to an enum
 //--------------------------------------------------------------------------------------
-D3DUtil_CameraKeys CBaseCamera::MapKey( UINT nKey )
+D3DUtil_CameraKeys CBaseCamera::MapKey( _In_ UINT nKey )
 {
     // This could be upgraded to a method that's user-definable but for 
     // simplicity, we'll use a hardcoded mapping.
@@ -698,46 +661,49 @@ D3DUtil_CameraKeys CBaseCamera::MapKey( UINT nKey )
 }
 
 
-
-
 //--------------------------------------------------------------------------------------
 // Reset the camera's position back to the default
 //--------------------------------------------------------------------------------------
-VOID CBaseCamera::Reset()
+void CBaseCamera::Reset()
 {
-    SetViewParams( &m_vDefaultEye, &m_vDefaultLookAt );
+    XMVECTOR vDefaultEye = XMLoadFloat3( &m_vDefaultEye );
+    XMVECTOR vDefaultLookAt = XMLoadFloat3( &m_vDefaultLookAt );
+
+    SetViewParams( vDefaultEye, vDefaultLookAt );
 }
 
 
+//======================================================================================
+// CFirstPersonCamera
+//======================================================================================
 
-
-//--------------------------------------------------------------------------------------
-// Constructor
-//--------------------------------------------------------------------------------------
-CFirstPersonCamera::CFirstPersonCamera() : m_nActiveButtonMask( 0x07 )
+CFirstPersonCamera::CFirstPersonCamera() :
+    m_nActiveButtonMask( 0x07 ),
+    m_bRotateWithoutButtonDown(false)
 {
-    m_bRotateWithoutButtonDown = false;
 }
-
-
 
 
 //--------------------------------------------------------------------------------------
 // Update the view matrix based on user input & elapsed time
 //--------------------------------------------------------------------------------------
-VOID CFirstPersonCamera::FrameMove( FLOAT fElapsedTime )
+void CFirstPersonCamera::FrameMove( _In_ float fElapsedTime )
 {
-    if( DXUTGetGlobalTimer()->IsStopped() ) {
-        if (DXUTGetFPS() == 0.0f) fElapsedTime = 0;
-        else fElapsedTime = 1.0f / DXUTGetFPS();
+    if( DXUTGetGlobalTimer()->IsStopped() )
+    {
+        if (DXUTGetFPS() == 0.0f)
+            fElapsedTime = 0;
+        else
+            fElapsedTime = 1.0f / DXUTGetFPS();
     }
 
     if( IsKeyDown( m_aKeys[CAM_RESET] ) )
+    {
         Reset();
+    }
 
     // Get keyboard/mouse/gamepad input
-    GetInput( m_bEnablePositionMovement, ( m_nActiveButtonMask & m_nCurrentButtonMask ) || m_bRotateWithoutButtonDown,
-              true, m_bResetCursorAfterMove );
+    GetInput( m_bEnablePositionMovement, ( m_nActiveButtonMask & m_nCurrentButtonMask ) || m_bRotateWithoutButtonDown, true );
 
     //// Get the mouse movement (if any) if the mouse button are down
     //if( (m_nActiveButtonMask & m_nCurrentButtonMask) || m_bRotateWithoutButtonDown )
@@ -747,13 +713,14 @@ VOID CFirstPersonCamera::FrameMove( FLOAT fElapsedTime )
     UpdateVelocity( fElapsedTime );
 
     // Simple euler method to calculate position delta
-    D3DXVECTOR3 vPosDelta = m_vVelocity * fElapsedTime;
+    XMVECTOR vVelocity = XMLoadFloat3( &m_vVelocity );
+    XMVECTOR vPosDelta = vVelocity * fElapsedTime;
 
     // If rotating the camera 
-    if( ( m_nActiveButtonMask & m_nCurrentButtonMask ) ||
-        m_bRotateWithoutButtonDown ||
-        m_vGamePadRightThumb.x != 0 ||
-        m_vGamePadRightThumb.z != 0 )
+    if( ( m_nActiveButtonMask & m_nCurrentButtonMask )
+        || m_bRotateWithoutButtonDown
+        || m_vGamePadRightThumb.x != 0
+        || m_vGamePadRightThumb.z != 0 )
     {
         // Update the pitch & yaw angle based on mouse movement
         float fYawDelta = m_vRotVelocity.x;
@@ -767,49 +734,50 @@ VOID CFirstPersonCamera::FrameMove( FLOAT fElapsedTime )
         m_fCameraYawAngle += fYawDelta;
 
         // Limit pitch to straight up or straight down
-        m_fCameraPitchAngle = __max( -D3DX_PI / 2.0f, m_fCameraPitchAngle );
-        m_fCameraPitchAngle = __min( +D3DX_PI / 2.0f, m_fCameraPitchAngle );
+        m_fCameraPitchAngle = std::max( -XM_PI / 2.0f, m_fCameraPitchAngle );
+        m_fCameraPitchAngle = std::min( +XM_PI / 2.0f, m_fCameraPitchAngle );
     }
 
     // Make a rotation matrix based on the camera's yaw & pitch
-    D3DXMATRIX mCameraRot;
-    D3DXMatrixRotationYawPitchRoll( &mCameraRot, m_fCameraYawAngle, m_fCameraPitchAngle, 0 );
+    XMMATRIX mCameraRot = XMMatrixRotationRollPitchYaw( m_fCameraPitchAngle, m_fCameraYawAngle, 0 );
 
     // Transform vectors based on camera's rotation matrix
-    D3DXVECTOR3 vWorldUp, vWorldAhead;
-    D3DXVECTOR3 vLocalUp = D3DXVECTOR3( 0, 1, 0 );
-    D3DXVECTOR3 vLocalAhead = D3DXVECTOR3( 0, 0, 1 );
-    D3DXVec3TransformCoord( &vWorldUp, &vLocalUp, &mCameraRot );
-    D3DXVec3TransformCoord( &vWorldAhead, &vLocalAhead, &mCameraRot );
+    XMVECTOR vWorldUp = XMVector3TransformCoord( g_XMIdentityR1, mCameraRot );
+    XMVECTOR vWorldAhead = XMVector3TransformCoord( g_XMIdentityR2, mCameraRot );
 
     // Transform the position delta by the camera's rotation 
-    D3DXVECTOR3 vPosDeltaWorld;
     if( !m_bEnableYAxisMovement )
     {
         // If restricting Y movement, do not include pitch
         // when transforming position delta vector.
-        D3DXMatrixRotationYawPitchRoll( &mCameraRot, m_fCameraYawAngle, 0.0f, 0.0f );
+        mCameraRot = XMMatrixRotationRollPitchYaw( 0.0f, m_fCameraYawAngle, 0.0f );
     }
-    D3DXVec3TransformCoord( &vPosDeltaWorld, &vPosDelta, &mCameraRot );
+    XMVECTOR vPosDeltaWorld = XMVector3TransformCoord( vPosDelta, mCameraRot );
 
     // Move the eye position 
-    m_vEye += vPosDeltaWorld;
+    XMVECTOR vEye = XMLoadFloat3( &m_vEye );
+    vEye += vPosDeltaWorld;
     if( m_bClipToBoundary )
-        ConstrainToBoundary( &m_vEye );
+        vEye = ConstrainToBoundary( vEye );
+    XMStoreFloat3( &m_vEye, vEye );
 
-    // Update the lookAt position based on the eye position 
-    m_vLookAt = m_vEye + vWorldAhead;
+    // Update the lookAt position based on the eye position
+    XMVECTOR vLookAt = vEye + vWorldAhead;
+    XMStoreFloat3( &m_vLookAt, vLookAt );
 
     // Update the view matrix
-    D3DXMatrixLookAtLH( &m_mView, &m_vEye, &m_vLookAt, &vWorldUp );
+    XMMATRIX mView = XMMatrixLookAtLH( vEye, vLookAt, vWorldUp );
+    XMStoreFloat4x4( &m_mView, mView );
 
-    D3DXMatrixInverse( &m_mCameraWorld, NULL, &m_mView );
+    XMMATRIX mCameraWorld = XMMatrixInverse( nullptr, mView );
+    XMStoreFloat4x4( &m_mCameraWorld, mCameraWorld );
 }
 
 
 //--------------------------------------------------------------------------------------
 // Enable or disable each of the mouse buttons for rotation drag.
 //--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 void CFirstPersonCamera::SetRotateButtons( bool bLeft, bool bMiddle, bool bRight, bool bRotateWithoutButtonDown )
 {
     m_nActiveButtonMask = ( bLeft ? MOUSE_LEFT_BUTTON : 0 ) |
@@ -819,38 +787,40 @@ void CFirstPersonCamera::SetRotateButtons( bool bLeft, bool bMiddle, bool bRight
 }
 
 
-//--------------------------------------------------------------------------------------
-// Constructor 
-//--------------------------------------------------------------------------------------
-CModelViewerCamera::CModelViewerCamera()
+
+//======================================================================================
+// CModelViewerCamera
+//======================================================================================
+
+CModelViewerCamera::CModelViewerCamera() :
+    m_nRotateModelButtonMask(MOUSE_LEFT_BUTTON),
+    m_nZoomButtonMask(MOUSE_WHEEL),
+    m_nRotateCameraButtonMask(MOUSE_RIGHT_BUTTON),
+    m_bAttachCameraToModel(false),
+    m_bLimitPitch(false),
+    m_bDragSinceLastUpdate(true),
+    m_fRadius(5.0f),
+    m_fDefaultRadius(5.0f),
+    m_fMinRadius(1.0f),
+    m_fMaxRadius(FLT_MAX)
 {
-    D3DXMatrixIdentity( &m_mWorld );
-    D3DXMatrixIdentity( &m_mModelRot );
-    D3DXMatrixIdentity( &m_mModelLastRot );
-    D3DXMatrixIdentity( &m_mCameraRotLast );
-    m_vModelCenter = D3DXVECTOR3( 0, 0, 0 );
-    m_fRadius = 5.0f;
-    m_fDefaultRadius = 5.0f;
-    m_fMinRadius = 1.0f;
-    m_fMaxRadius = FLT_MAX;
-    m_bLimitPitch = false;
+    XMMATRIX id = XMMatrixIdentity();
+
+    XMStoreFloat4x4( &m_mWorld, id );
+    XMStoreFloat4x4( &m_mModelRot, id );
+    XMStoreFloat4x4( &m_mModelLastRot, id );
+    XMStoreFloat4x4( &m_mCameraRotLast, id );
+    m_vModelCenter = XMFLOAT3( 0, 0, 0 );
+
     m_bEnablePositionMovement = false;
-    m_bAttachCameraToModel = false;
-
-    m_nRotateModelButtonMask = MOUSE_LEFT_BUTTON;
-    m_nZoomButtonMask = MOUSE_WHEEL;
-    m_nRotateCameraButtonMask = MOUSE_RIGHT_BUTTON;
-    m_bDragSinceLastUpdate = true;
 }
-
-
 
 
 //--------------------------------------------------------------------------------------
 // Update the view matrix & the model's world matrix based 
 //       on user input & elapsed time
 //--------------------------------------------------------------------------------------
-VOID CModelViewerCamera::FrameMove( FLOAT fElapsedTime )
+void CModelViewerCamera::FrameMove( _In_ float fElapsedTime )
 {
     if( IsKeyDown( m_aKeys[CAM_RESET] ) )
         Reset();
@@ -859,6 +829,7 @@ VOID CModelViewerCamera::FrameMove( FLOAT fElapsedTime )
     // and no camera key is held down, then no need to handle again.
     if( !m_bDragSinceLastUpdate && 0 == m_cKeysDown )
         return;
+
     m_bDragSinceLastUpdate = false;
 
     //// If no mouse button is held down, 
@@ -866,100 +837,101 @@ VOID CModelViewerCamera::FrameMove( FLOAT fElapsedTime )
     //if( m_nCurrentButtonMask != 0 ) 
     //    UpdateMouseDelta( fElapsedTime );
 
-    GetInput( m_bEnablePositionMovement, m_nCurrentButtonMask != 0, true, false );
+    GetInput( m_bEnablePositionMovement, m_nCurrentButtonMask != 0, true );
 
     // Get amount of velocity based on the keyboard input and drag (if any)
     UpdateVelocity( fElapsedTime );
 
     // Simple euler method to calculate position delta
-    D3DXVECTOR3 vPosDelta = m_vVelocity * fElapsedTime;
+    XMVECTOR vPosDelta = XMLoadFloat3( &m_vVelocity ) * fElapsedTime;
 
     // Change the radius from the camera to the model based on wheel scrolling
     if( m_nMouseWheelDelta && m_nZoomButtonMask == MOUSE_WHEEL )
         m_fRadius -= m_nMouseWheelDelta * m_fRadius * 0.1f / 120.0f;
-    m_fRadius = __min( m_fMaxRadius, m_fRadius );
-    m_fRadius = __max( m_fMinRadius, m_fRadius );
+    m_fRadius = std::min( m_fMaxRadius, m_fRadius );
+    m_fRadius = std::max( m_fMinRadius, m_fRadius );
     m_nMouseWheelDelta = 0;
 
     // Get the inverse of the arcball's rotation matrix
-    D3DXMATRIX mCameraRot;
-    D3DXMatrixInverse( &mCameraRot, NULL, m_ViewArcBall.GetRotationMatrix() );
+    XMMATRIX mCameraRot = XMMatrixInverse( nullptr, m_ViewArcBall.GetRotationMatrix() );
 
     // Transform vectors based on camera's rotation matrix
-    D3DXVECTOR3 vWorldUp, vWorldAhead;
-    D3DXVECTOR3 vLocalUp = D3DXVECTOR3( 0, 1, 0 );
-    D3DXVECTOR3 vLocalAhead = D3DXVECTOR3( 0, 0, 1 );
-    D3DXVec3TransformCoord( &vWorldUp, &vLocalUp, &mCameraRot );
-    D3DXVec3TransformCoord( &vWorldAhead, &vLocalAhead, &mCameraRot );
+    XMVECTOR vWorldUp = XMVector3TransformCoord( g_XMIdentityR1, mCameraRot );
+    XMVECTOR vWorldAhead = XMVector3TransformCoord( g_XMIdentityR2, mCameraRot );
 
     // Transform the position delta by the camera's rotation 
-    D3DXVECTOR3 vPosDeltaWorld;
-    D3DXVec3TransformCoord( &vPosDeltaWorld, &vPosDelta, &mCameraRot );
+    XMVECTOR vPosDeltaWorld = XMVector3TransformCoord( vPosDelta, mCameraRot );
 
     // Move the lookAt position 
-    m_vLookAt += vPosDeltaWorld;
+    XMVECTOR vLookAt = XMLoadFloat3( &m_vLookAt );
+    vLookAt += vPosDeltaWorld;
     if( m_bClipToBoundary )
-        ConstrainToBoundary( &m_vLookAt );
+        vLookAt = ConstrainToBoundary( vLookAt );
+    XMStoreFloat3( &m_vLookAt, vLookAt );
 
     // Update the eye point based on a radius away from the lookAt position
-    m_vEye = m_vLookAt - vWorldAhead * m_fRadius;
+    XMVECTOR vEye = vLookAt - vWorldAhead * m_fRadius;
+    XMStoreFloat3( &m_vEye, vEye );
 
     // Update the view matrix
-    D3DXMatrixLookAtLH( &m_mView, &m_vEye, &m_vLookAt, &vWorldUp );
+    XMMATRIX mView = XMMatrixLookAtLH( vEye, vLookAt, vWorldUp );
+    XMStoreFloat4x4( &m_mView, mView );
 
-    D3DXMATRIX mInvView;
-    D3DXMatrixInverse( &mInvView, NULL, &m_mView );
-    mInvView._41 = mInvView._42 = mInvView._43 = 0;
+    XMMATRIX mInvView = XMMatrixInverse( nullptr, mView );
+    mInvView.r[3] = XMVectorSelect( mInvView.r[3], g_XMZero, g_XMSelect1110 );
 
-    D3DXMATRIX mModelLastRotInv;
-    D3DXMatrixInverse( &mModelLastRotInv, NULL, &m_mModelLastRot );
+    XMMATRIX mModelLastRot = XMLoadFloat4x4( &m_mModelLastRot );
+    XMMATRIX mModelLastRotInv = XMMatrixInverse( nullptr, mModelLastRot );
 
     // Accumulate the delta of the arcball's rotation in view space.
     // Note that per-frame delta rotations could be problematic over long periods of time.
-    D3DXMATRIX mModelRot;
-    mModelRot = *m_WorldArcBall.GetRotationMatrix();
-    m_mModelRot *= m_mView * mModelLastRotInv * mModelRot * mInvView;
+    XMMATRIX mModelRot0 = m_WorldArcBall.GetRotationMatrix();
+    XMMATRIX mModelRot = XMLoadFloat4x4( &m_mModelRot );
+    mModelRot *= mView * mModelLastRotInv * mModelRot0 * mInvView;
 
     if( m_ViewArcBall.IsBeingDragged() && m_bAttachCameraToModel && !IsKeyDown( m_aKeys[CAM_CONTROLDOWN] ) )
     {
         // Attach camera to model by inverse of the model rotation
-        D3DXMATRIX mCameraLastRotInv;
-        D3DXMatrixInverse( &mCameraLastRotInv, NULL, &m_mCameraRotLast );
-        D3DXMATRIX mCameraRotDelta = mCameraLastRotInv * mCameraRot; // local to world matrix
-        m_mModelRot *= mCameraRotDelta;
+        XMMATRIX mCameraRotLast = XMLoadFloat4x4( &m_mCameraRotLast );
+        XMMATRIX mCameraLastRotInv = XMMatrixInverse( nullptr, mCameraRotLast );
+        XMMATRIX mCameraRotDelta = mCameraLastRotInv * mCameraRot; // local to world matrix
+        mModelRot *= mCameraRotDelta;
     }
-    m_mCameraRotLast = mCameraRot;
 
-    m_mModelLastRot = mModelRot;
+    XMStoreFloat4x4( &m_mModelLastRot, mModelRot0 );
+    XMStoreFloat4x4( &m_mCameraRotLast, mCameraRot );
 
     // Since we're accumulating delta rotations, we need to orthonormalize 
     // the matrix to prevent eventual matrix skew
-    D3DXVECTOR3* pXBasis = ( D3DXVECTOR3* )&m_mModelRot._11;
-    D3DXVECTOR3* pYBasis = ( D3DXVECTOR3* )&m_mModelRot._21;
-    D3DXVECTOR3* pZBasis = ( D3DXVECTOR3* )&m_mModelRot._31;
-    D3DXVec3Normalize( pXBasis, pXBasis );
-    D3DXVec3Cross( pYBasis, pZBasis, pXBasis );
-    D3DXVec3Normalize( pYBasis, pYBasis );
-    D3DXVec3Cross( pZBasis, pXBasis, pYBasis );
+    XMVECTOR xBasis = XMVector3Normalize( mModelRot.r[0] );
+    XMVECTOR yBasis = XMVector3Cross( mModelRot.r[2], xBasis );
+    yBasis = XMVector3Normalize( yBasis );
+    XMVECTOR zBasis = XMVector3Cross( xBasis, yBasis );
+
+    mModelRot.r[0] = XMVectorSelect( mModelRot.r[0], xBasis, g_XMSelect1110 );
+    mModelRot.r[1] = XMVectorSelect( mModelRot.r[1], yBasis, g_XMSelect1110 );
+    mModelRot.r[2] = XMVectorSelect( mModelRot.r[2], zBasis, g_XMSelect1110 );
 
     // Translate the rotation matrix to the same position as the lookAt position
-    m_mModelRot._41 = m_vLookAt.x;
-    m_mModelRot._42 = m_vLookAt.y;
-    m_mModelRot._43 = m_vLookAt.z;
+    mModelRot.r[3] = XMVectorSelect( mModelRot.r[3], vLookAt, g_XMSelect1110 );
+    
+    XMStoreFloat4x4( &m_mModelRot, mModelRot );
 
     // Translate world matrix so its at the center of the model
-    D3DXMATRIX mTrans;
-    D3DXMatrixTranslation( &mTrans, -m_vModelCenter.x, -m_vModelCenter.y, -m_vModelCenter.z );
-    m_mWorld = mTrans * m_mModelRot;
+    XMMATRIX mTrans = XMMatrixTranslation( -m_vModelCenter.x, -m_vModelCenter.y, -m_vModelCenter.z );
+    XMMATRIX mWorld = mTrans * mModelRot;
+    XMStoreFloat4x4( &m_mWorld, mWorld );
 }
 
 
-void CModelViewerCamera::SetDragRect( RECT& rc )
+//--------------------------------------------------------------------------------------
+void CModelViewerCamera::SetDragRect( _In_ const RECT& rc )
 {
     CBaseCamera::SetDragRect( rc );
 
     m_WorldArcBall.SetOffset( rc.left, rc.top );
     m_ViewArcBall.SetOffset( rc.left, rc.top );
+
     SetWindow( rc.right - rc.left, rc.bottom - rc.top );
 }
 
@@ -967,14 +939,15 @@ void CModelViewerCamera::SetDragRect( RECT& rc )
 //--------------------------------------------------------------------------------------
 // Reset the camera's position back to the default
 //--------------------------------------------------------------------------------------
-VOID CModelViewerCamera::Reset()
+void CModelViewerCamera::Reset()
 {
     CBaseCamera::Reset();
 
-    D3DXMatrixIdentity( &m_mWorld );
-    D3DXMatrixIdentity( &m_mModelRot );
-    D3DXMatrixIdentity( &m_mModelLastRot );
-    D3DXMatrixIdentity( &m_mCameraRotLast );
+    XMMATRIX id = XMMatrixIdentity();
+    XMStoreFloat4x4( &m_mWorld, id );
+    XMStoreFloat4x4( &m_mModelRot, id );
+    XMStoreFloat4x4( &m_mModelLastRot, id );
+    XMStoreFloat4x4( &m_mCameraRotLast, id );
 
     m_fRadius = m_fDefaultRadius;
     m_WorldArcBall.Reset();
@@ -985,32 +958,30 @@ VOID CModelViewerCamera::Reset()
 //--------------------------------------------------------------------------------------
 // Override for setting the view parameters
 //--------------------------------------------------------------------------------------
-void CModelViewerCamera::SetViewParams( D3DXVECTOR3* pvEyePt, D3DXVECTOR3* pvLookatPt )
+_Use_decl_annotations_
+void CModelViewerCamera::SetViewParams( FXMVECTOR vEyePt, FXMVECTOR vLookatPt )
 {
-    CBaseCamera::SetViewParams( pvEyePt, pvLookatPt );
+    CBaseCamera::SetViewParams( vEyePt, vLookatPt );
 
     // Propogate changes to the member arcball
-    D3DXQUATERNION quat;
-    D3DXMATRIXA16 mRotation;
-    D3DXVECTOR3 vUp( 0,1,0 );
-    D3DXMatrixLookAtLH( &mRotation, pvEyePt, pvLookatPt, &vUp );
-    D3DXQuaternionRotationMatrix( &quat, &mRotation );
+    XMMATRIX mRotation = XMMatrixLookAtLH( vEyePt, vLookatPt, g_XMIdentityR1 );
+    XMVECTOR quat = XMQuaternionRotationMatrix( mRotation );
     m_ViewArcBall.SetQuatNow( quat );
 
     // Set the radius according to the distance
-    D3DXVECTOR3 vEyeToPoint;
-    D3DXVec3Subtract( &vEyeToPoint, pvLookatPt, pvEyePt );
-    SetRadius( D3DXVec3Length( &vEyeToPoint ) );
+    XMVECTOR vEyeToPoint = XMVectorSubtract( vLookatPt, vEyePt );
+    float len = XMVectorGetX( XMVector3Length( vEyeToPoint ) );
+    SetRadius( len );
 
     // View information changed. FrameMove should be called.
     m_bDragSinceLastUpdate = true;
 }
 
 
-
 //--------------------------------------------------------------------------------------
 // Call this from your message proc so this class can handle window messages
 //--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 LRESULT CModelViewerCamera::HandleMessages( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
     CBaseCamera::HandleMessages( hWnd, uMsg, wParam, lParam );
@@ -1095,152 +1066,32 @@ LRESULT CModelViewerCamera::HandleMessages( HWND hWnd, UINT uMsg, WPARAM wParam,
 }
 
 
+//======================================================================================
+// CDXUTDirectionWidget
+//======================================================================================
 
-//--------------------------------------------------------------------------------------
-// D3D9
-IDirect3DDevice9*           CDXUTDirectionWidget::s_pd3d9Device = NULL;
-ID3DXEffect*                CDXUTDirectionWidget::s_pD3D9Effect = NULL;
-ID3DXMesh*                  CDXUTDirectionWidget::s_pD3D9Mesh = NULL;
-D3DXHANDLE                  CDXUTDirectionWidget::s_hRenderWith1LightNoTexture = NULL;
-D3DXHANDLE                  CDXUTDirectionWidget::s_hMaterialDiffuseColor = NULL;
-D3DXHANDLE                  CDXUTDirectionWidget::s_hLightDir = NULL;
-D3DXHANDLE                  CDXUTDirectionWidget::s_hWorldViewProjection = NULL;
-D3DXHANDLE                  CDXUTDirectionWidget::s_hWorld = NULL;
-
-
-//--------------------------------------------------------------------------------------
-CDXUTDirectionWidget::CDXUTDirectionWidget()
+CDXUTDirectionWidget::CDXUTDirectionWidget() :
+    m_fRadius(1.0f),
+    m_nRotateMask(MOUSE_RIGHT_BUTTON)
 {
-    m_fRadius = 1.0f;
-    m_vDefaultDir = D3DXVECTOR3( 0, 1, 0 );
+    m_vDefaultDir = XMFLOAT3( 0, 1, 0 );
     m_vCurrentDir = m_vDefaultDir;
-    m_nRotateMask = MOUSE_RIGHT_BUTTON;
 
-    D3DXMatrixIdentity( &m_mView );
-    D3DXMatrixIdentity( &m_mRot );
-    D3DXMatrixIdentity( &m_mRotSnapshot );
+    XMMATRIX id = XMMatrixIdentity();
+
+    XMStoreFloat4x4( &m_mView, id );
+    XMStoreFloat4x4( &m_mRot, id );
+    XMStoreFloat4x4( &m_mRotSnapshot, id );
 }
 
 
 //--------------------------------------------------------------------------------------
-HRESULT CDXUTDirectionWidget::StaticOnD3D9CreateDevice( IDirect3DDevice9* pd3dDevice )
-{
-    HRESULT hr;
-
-    s_pd3d9Device = pd3dDevice;
-
-    const char* g_strBuffer =
-        "float4 g_MaterialDiffuseColor;      // Material's diffuse color\r\n"
-        "float3 g_LightDir;                  // Light's direction in world space\r\n"
-        "float4x4 g_mWorld;                  // World matrix for object\r\n"
-        "float4x4 g_mWorldViewProjection;    // World * View * Projection matrix\r\n"
-        "\r\n"
-        "struct VS_OUTPUT\r\n"
-        "{\r\n"
-        "    float4 Position   : POSITION;   // vertex position\r\n"
-        "    float4 Diffuse    : COLOR0;     // vertex diffuse color\r\n"
-        "};\r\n"
-        "\r\n"
-        "VS_OUTPUT RenderWith1LightNoTextureVS( float4 vPos : POSITION,\r\n"
-        "                                       float3 vNormal : NORMAL )\r\n"
-        "{\r\n"
-        "    VS_OUTPUT Output;\r\n"
-        "\r\n"
-        "    // Transform the position from object space to homogeneous projection space\r\n"
-        "    Output.Position = mul(vPos, g_mWorldViewProjection);\r\n"
-        "\r\n"
-        "    // Transform the normal from object space to world space\r\n"
-        "    float3 vNormalWorldSpace;\r\n"
-        "    vNormalWorldSpace = normalize(mul(vNormal, (float3x3)g_mWorld)); // normal (world space)\r\n"
-        "\r\n"
-        "    // Compute simple directional lighting equation\r\n"
-        "    Output.Diffuse.rgb = g_MaterialDiffuseColor * max(0,dot(vNormalWorldSpace, g_LightDir));\r\n"
-        "    Output.Diffuse.a = 1.0f;\r\n"
-        "\r\n"
-        "    return Output;\r\n"
-        "}\r\n"
-        "\r\n"
-        "float4 RenderWith1LightNoTexturePS( float4 Diffuse : COLOR0 ) : COLOR0\r\n"
-        "{\r\n"
-        "    return Diffuse;\r\n"
-        "}\r\n"
-        "\r\n"
-        "technique RenderWith1LightNoTexture\r\n"
-        "{\r\n"
-        "    pass P0\r\n"
-        "    {\r\n"
-        "        VertexShader = compile vs_2_0 RenderWith1LightNoTextureVS();\r\n"
-        "        PixelShader  = compile ps_2_0 RenderWith1LightNoTexturePS();\r\n"
-        "    }\r\n"
-        "}\r\n"
-        "";
-
-    UINT dwBufferSize = ( UINT )strlen( g_strBuffer ) + 1;
-
-    DWORD Flags = D3DXFX_NOT_CLONEABLE;
-#ifdef D3DXFX_LARGEADDRESS_HANDLE
-    Flags |= D3DXFX_LARGEADDRESSAWARE;
-#endif
-
-    V_RETURN( D3DXCreateEffect( s_pd3d9Device, g_strBuffer, dwBufferSize, NULL, NULL, Flags,
-                                NULL, &s_pD3D9Effect, NULL ) );
-
-    // Save technique handles for use when rendering
-    s_hRenderWith1LightNoTexture = s_pD3D9Effect->GetTechniqueByName( "RenderWith1LightNoTexture" );
-    s_hMaterialDiffuseColor = s_pD3D9Effect->GetParameterByName( NULL, "g_MaterialDiffuseColor" );
-    s_hLightDir = s_pD3D9Effect->GetParameterByName( NULL, "g_LightDir" );
-    s_hWorld = s_pD3D9Effect->GetParameterByName( NULL, "g_mWorld" );
-    s_hWorldViewProjection = s_pD3D9Effect->GetParameterByName( NULL, "g_mWorldViewProjection" );
-
-    // Load the mesh with D3DX and get back a ID3DXMesh*.  For this
-    // sample we'll ignore the X file's embedded materials since we know 
-    // exactly the model we're loading.  See the mesh samples such as
-    // "OptimizedMesh" for a more generic mesh loading example.
-    V_RETURN( DXUTCreateArrowMeshFromInternalArray( s_pd3d9Device, &s_pD3D9Mesh ) );
-
-    // Optimize the mesh for this graphics card's vertex cache 
-    // so when rendering the mesh's triangle list the vertices will 
-    // cache hit more often so it won't have to re-execute the vertex shader 
-    // on those vertices so it will improve perf.
-    DWORD* rgdwAdjacency = new DWORD[s_pD3D9Mesh->GetNumFaces() * 3];
-    if( rgdwAdjacency == NULL )
-        return E_OUTOFMEMORY;
-    V( s_pD3D9Mesh->GenerateAdjacency( 1e-6f, rgdwAdjacency ) );
-    V( s_pD3D9Mesh->OptimizeInplace( D3DXMESHOPT_VERTEXCACHE, rgdwAdjacency, NULL, NULL, NULL ) );
-    delete []rgdwAdjacency;
-
-    return S_OK;
-}
-
-
-//--------------------------------------------------------------------------------------
-HRESULT CDXUTDirectionWidget::OnD3D9ResetDevice( const D3DSURFACE_DESC* pBackBufferSurfaceDesc )
-{
-    m_ArcBall.SetWindow( pBackBufferSurfaceDesc->Width, pBackBufferSurfaceDesc->Height );
-    return S_OK;
-}
-
-
-//--------------------------------------------------------------------------------------
-void CDXUTDirectionWidget::StaticOnD3D9LostDevice()
-{
-    if( s_pD3D9Effect )
-        s_pD3D9Effect->OnLostDevice();
-}
-
-
-//--------------------------------------------------------------------------------------
-void CDXUTDirectionWidget::StaticOnD3D9DestroyDevice()
-{
-    SAFE_RELEASE( s_pD3D9Effect );
-    SAFE_RELEASE( s_pD3D9Mesh );
-}
-
-
-//--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 LRESULT CDXUTDirectionWidget::HandleMessages( HWND hWnd, UINT uMsg,
                                               WPARAM wParam, LPARAM lParam )
 {
+    UNREFERENCED_PARAMETER(wParam);
+
     switch( uMsg )
     {
         case WM_LBUTTONDOWN:
@@ -1308,221 +1159,70 @@ LRESULT CDXUTDirectionWidget::HandleMessages( HWND hWnd, UINT uMsg,
 
 
 //--------------------------------------------------------------------------------------
-HRESULT CDXUTDirectionWidget::OnRender9( D3DXCOLOR color, const D3DXMATRIX* pmView,
-                                         const D3DXMATRIX* pmProj, const D3DXVECTOR3* pEyePt )
-{
-    m_mView = *pmView;
-
-    // Render the light spheres so the user can visually see the light dir
-    UINT iPass, cPasses;
-    D3DXMATRIX mRotate;
-    D3DXMATRIX mScale;
-    D3DXMATRIX mTrans;
-    D3DXMATRIXA16 mWorldViewProj;
-    HRESULT hr;
-
-    V( s_pD3D9Effect->SetTechnique( s_hRenderWith1LightNoTexture ) );
-    V( s_pD3D9Effect->SetVector( s_hMaterialDiffuseColor, ( D3DXVECTOR4* )&color ) );
-
-    D3DXVECTOR3 vEyePt;
-    D3DXVec3Normalize( &vEyePt, pEyePt );
-    V( s_pD3D9Effect->SetValue( s_hLightDir, &vEyePt, sizeof( D3DXVECTOR3 ) ) );
-
-    // Rotate arrow model to point towards origin
-    D3DXMATRIX mRotateA, mRotateB;
-    D3DXVECTOR3 vAt = D3DXVECTOR3( 0, 0, 0 );
-    D3DXVECTOR3 vUp = D3DXVECTOR3( 0, 1, 0 );
-    D3DXMatrixRotationX( &mRotateB, D3DX_PI );
-    D3DXMatrixLookAtLH( &mRotateA, &m_vCurrentDir, &vAt, &vUp );
-    D3DXMatrixInverse( &mRotateA, NULL, &mRotateA );
-    mRotate = mRotateB * mRotateA;
-
-    D3DXVECTOR3 vL = m_vCurrentDir * m_fRadius * 1.0f;
-    D3DXMatrixTranslation( &mTrans, vL.x, vL.y, vL.z );
-    D3DXMatrixScaling( &mScale, m_fRadius * 0.2f, m_fRadius * 0.2f, m_fRadius * 0.2f );
-
-    D3DXMATRIX mWorld = mRotate * mScale * mTrans;
-    mWorldViewProj = mWorld * ( m_mView )*( *pmProj );
-
-    V( s_pD3D9Effect->SetMatrix( s_hWorldViewProjection, &mWorldViewProj ) );
-    V( s_pD3D9Effect->SetMatrix( s_hWorld, &mWorld ) );
-
-    for( int iSubset = 0; iSubset < 2; iSubset++ )
-    {
-        V( s_pD3D9Effect->Begin( &cPasses, 0 ) );
-        for( iPass = 0; iPass < cPasses; iPass++ )
-        {
-            V( s_pD3D9Effect->BeginPass( iPass ) );
-            V( s_pD3D9Mesh->DrawSubset( iSubset ) );
-            V( s_pD3D9Effect->EndPass() );
-        }
-        V( s_pD3D9Effect->End() );
-    }
-
-    return S_OK;
-}
-
-//--------------------------------------------------------------------------------------
 HRESULT CDXUTDirectionWidget::UpdateLightDir()
 {
-    D3DXMATRIX mInvView;
-    D3DXMatrixInverse( &mInvView, NULL, &m_mView );
-    mInvView._41 = mInvView._42 = mInvView._43 = 0;
+    XMMATRIX mView = XMLoadFloat4x4( &m_mView );
 
-    D3DXMATRIX mLastRotInv;
-    D3DXMatrixInverse( &mLastRotInv, NULL, &m_mRotSnapshot );
+    XMMATRIX mInvView = XMMatrixInverse( nullptr, mView );
+    mInvView.r[3] = XMVectorSelect( mInvView.r[3], g_XMZero, g_XMSelect1110 );
 
-    D3DXMATRIX mRot = *m_ArcBall.GetRotationMatrix();
-    m_mRotSnapshot = mRot;
+    XMMATRIX mRotSnapshot = XMLoadFloat4x4( &m_mRotSnapshot );
+    XMMATRIX mLastRotInv = XMMatrixInverse( nullptr, mRotSnapshot );
+
+    XMMATRIX mRot0 = m_ArcBall.GetRotationMatrix();
+    XMStoreFloat4x4( &m_mRotSnapshot, mRot0 );
 
     // Accumulate the delta of the arcball's rotation in view space.
     // Note that per-frame delta rotations could be problematic over long periods of time.
-    m_mRot *= m_mView * mLastRotInv * mRot * mInvView;
+    XMMATRIX mRot = XMLoadFloat4x4( &m_mRot );
+    mRot *= mView * mLastRotInv * mRot0 * mInvView;
 
     // Since we're accumulating delta rotations, we need to orthonormalize 
     // the matrix to prevent eventual matrix skew
-    D3DXVECTOR3* pXBasis = ( D3DXVECTOR3* )&m_mRot._11;
-    D3DXVECTOR3* pYBasis = ( D3DXVECTOR3* )&m_mRot._21;
-    D3DXVECTOR3* pZBasis = ( D3DXVECTOR3* )&m_mRot._31;
-    D3DXVec3Normalize( pXBasis, pXBasis );
-    D3DXVec3Cross( pYBasis, pZBasis, pXBasis );
-    D3DXVec3Normalize( pYBasis, pYBasis );
-    D3DXVec3Cross( pZBasis, pXBasis, pYBasis );
+    XMVECTOR xBasis = XMVector3Normalize( mRot.r[0] );
+    XMVECTOR yBasis = XMVector3Cross( mRot.r[2], xBasis );
+    yBasis = XMVector3Normalize( yBasis );
+    XMVECTOR zBasis = XMVector3Cross( xBasis, yBasis );
+    mRot.r[0] = XMVectorSelect( mRot.r[0], xBasis, g_XMSelect1110 );
+    mRot.r[1] = XMVectorSelect( mRot.r[1], yBasis, g_XMSelect1110 );
+    mRot.r[2] = XMVectorSelect( mRot.r[2], zBasis, g_XMSelect1110 );
+    XMStoreFloat4x4( &m_mRot, mRot );
 
     // Transform the default direction vector by the light's rotation matrix
-    D3DXVec3TransformNormal( &m_vCurrentDir, &m_vDefaultDir, &m_mRot );
+    XMVECTOR vDefaultDir = XMLoadFloat3( &m_vDefaultDir );
+    XMVECTOR vCurrentDir = XMVector3TransformNormal( vDefaultDir, mRot );
+    XMStoreFloat3( &m_vCurrentDir, vCurrentDir );
 
     return S_OK;
 }
 
+
 //--------------------------------------------------------------------------------------
+_Use_decl_annotations_
+HRESULT CDXUTDirectionWidget::OnRender( FXMVECTOR color, CXMMATRIX mView, CXMMATRIX mProj, FXMVECTOR vEyePt )
+{
+    UNREFERENCED_PARAMETER(color);
+    UNREFERENCED_PARAMETER(mView);
+    UNREFERENCED_PARAMETER(mProj);
+    UNREFERENCED_PARAMETER(vEyePt);
+    // TODO - 
+    return S_OK;
+}
+
+
+//--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 HRESULT CDXUTDirectionWidget::StaticOnD3D11CreateDevice( ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3dImmediateContext )
 {
-    
-
-    //s_pd3d10Device = pd3dDevice;
-
-    //const char* g_strBuffer =
-    //    "float4 g_MaterialDiffuseColor;      // Material's diffuse color\r\n"
-    //    "float4 g_LightDir;                  // Light's direction in world space\r\n"
-    //    "float4x4 g_mWorld;                  // World matrix for object\r\n"
-    //    "float4x4 g_mWorldViewProjection;    // World * View * Projection matrix\r\n"
-    //    "\r\n"
-    //    "struct VS_OUTPUT\r\n"
-    //    "{\r\n"
-    //    "    float4 Position   : SV_POSITION;   // vertex position\r\n"
-    //    "    float4 Diffuse    : COLOR0;     // vertex diffuse color\r\n"
-    //    "};\r\n"
-    //    "\r\n"
-    //    "VS_OUTPUT RenderWith1LightNoTextureVS( float3 vPos : POSITION,\r\n"
-    //    "                                       float3 vNormal : NORMAL )\r\n"
-    //    "{\r\n"
-    //    "    VS_OUTPUT Output;\r\n"
-    //    "\r\n"
-    //    "    // Transform the position from object space to homogeneous projection space\r\n"
-    //    "    Output.Position = mul( float4(vPos,1), g_mWorldViewProjection);\r\n"
-    //    "\r\n"
-    //    "    // Transform the normal from object space to world space\r\n"
-    //    "    float3 vNormalWorldSpace;\r\n"
-    //    "    vNormalWorldSpace = normalize(mul(vNormal, (float3x3)g_mWorld)); // normal (world space)\r\n"
-    //    "\r\n"
-    //    "    // Compute simple directional lighting equation\r\n"
-    //    "    Output.Diffuse.rgb = g_MaterialDiffuseColor * max(0,dot(vNormalWorldSpace, g_LightDir));\r\n"
-    //    "    Output.Diffuse.a = 1.0f;\r\n"
-    //    "\r\n"
-    //    "    return Output;\r\n"
-    //    "}\r\n"
-    //    "\r\n"
-    //    "float4 RenderWith1LightNoTexturePS( VS_OUTPUT Input ) : SV_TARGET\r\n"
-    //    "{\r\n"
-    //    "    return Input.Diffuse;\r\n"
-    //    "}\r\n"
-    //    "\r\n"
-    //    "technique10 RenderWith1LightNoTexture\r\n"
-    //    "{\r\n"
-    //    "    pass p0\r\n"
-    //    "    {\r\n"
-    //    "       SetVertexShader( CompileShader( vs_4_0, RenderWith1LightNoTextureVS() ) );\r\n"
-    //    "       SetGeometryShader( NULL );\r\n"
-    //    "       SetPixelShader( CompileShader( ps_4_0, RenderWith1LightNoTexturePS() ) );\r\n"
-    //    "    }\r\n"
-    //    "}\r\n"
-    //    "";
-
-    //UINT dwBufferSize = ( UINT )strlen( g_strBuffer ) + 1;
-
-    //HRESULT hr = D3DX10CreateEffectFromMemory( g_strBuffer, dwBufferSize, "None", NULL, NULL, "fx_4_0",
-    //                                           D3D10_SHADER_ENABLE_STRICTNESS, 0, pd3dDevice, NULL,
-    //                                           NULL, &s_pD3D10Effect, NULL, NULL );
-    //if( FAILED( hr ) )
-    //    return hr;
-
-    //s_pRenderTech = s_pD3D10Effect->GetTechniqueByName( "RenderWith1LightNoTexture" );
-    //g_pMaterialDiffuseColor = s_pD3D10Effect->GetVariableByName( "g_MaterialDiffuseColor" )->AsVector();
-    //g_pLightDir = s_pD3D10Effect->GetVariableByName( "g_LightDir" )->AsVector();
-    //g_pmWorld = s_pD3D10Effect->GetVariableByName( "g_mWorld" )->AsMatrix();
-    //g_pmWorldViewProjection = s_pD3D10Effect->GetVariableByName( "g_mWorldViewProjection" )->AsMatrix();
-
-    //const D3D10_INPUT_ELEMENT_DESC layout[] =
-    //{
-    //    { "POSITION",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,  D3D10_INPUT_PER_VERTEX_DATA, 0 },
-    //    { "NORMAL",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D10_INPUT_PER_VERTEX_DATA, 0 },
-    //};
-    //D3D10_PASS_DESC PassDesc;
-    //V_RETURN( s_pRenderTech->GetPassByIndex( 0 )->GetDesc( &PassDesc ) );
-    //V_RETURN( pd3dDevice->CreateInputLayout( layout, 2, PassDesc.pIAInputSignature,
-    //                                         PassDesc.IAInputSignatureSize, &s_pVertexLayout ) );
-    
+    UNREFERENCED_PARAMETER(pd3dDevice);
+    UNREFERENCED_PARAMETER(pd3dImmediateContext);
+    // TODO -
     return S_OK;
 }
 
-//--------------------------------------------------------------------------------------
-HRESULT CDXUTDirectionWidget::OnRender11( D3DXCOLOR color, const D3DXMATRIX* pmView, const D3DXMATRIX* pmProj,
-                                          const D3DXVECTOR3* pEyePt )
-{
-   // NO 11 version of D3DX11Mesh YET
-   // m_mView = *pmView;
-
-   // // Render the light spheres so the user can visually see the light dir
-   // D3DXMATRIX mRotate;
-   // D3DXMATRIX mScale;
-   // D3DXMATRIX mTrans;
-   // D3DXMATRIXA16 mWorldViewProj;
-
-   // g_pMaterialDiffuseColor->SetFloatVector( ( float* )&color );
-   // D3DXVECTOR3 vEyePt;
-   // D3DXVec3Normalize( &vEyePt, pEyePt );
-   // g_pLightDir->SetFloatVector( ( float* )&vEyePt );
-
-   // // Rotate arrow model to point towards origin
-   // D3DXMATRIX mRotateA, mRotateB;
-   // D3DXVECTOR3 vAt = D3DXVECTOR3( 0, 0, 0 );
-   // D3DXVECTOR3 vUp = D3DXVECTOR3( 0, 1, 0 );
-   // D3DXMatrixRotationX( &mRotateB, D3DX_PI );
-   // D3DXMatrixLookAtLH( &mRotateA, &m_vCurrentDir, &vAt, &vUp );
-   // D3DXMatrixInverse( &mRotateA, NULL, &mRotateA );
-   // mRotate = mRotateB * mRotateA;
-
-   // D3DXVECTOR3 vL = m_vCurrentDir * m_fRadius * 1.0f;
-   // D3DXMatrixTranslation( &mTrans, vL.x, vL.y, vL.z );
-   // D3DXMatrixScaling( &mScale, m_fRadius * 0.2f, m_fRadius * 0.2f, m_fRadius * 0.2f );
-
-   // D3DXMATRIX mWorld = mRotate * mScale * mTrans;
-   // mWorldViewProj = mWorld * ( m_mView )*( *pmProj );
-
-   // g_pmWorldViewProjection->SetMatrix( ( float* )&mWorldViewProj );
-   // g_pmWorld->SetMatrix( ( float* )&mWorld );
-
-   // s_pd3d10Device->IASetInputLayout( s_pVertexLayout );
-    
-   // Add rendering code here
-
-    return S_OK;
-}
 
 //--------------------------------------------------------------------------------------
 void CDXUTDirectionWidget::StaticOnD3D11DestroyDevice()
 {
-//    SAFE_RELEASE( s_pVertexLayout );
-//    SAFE_RELEASE( s_pD3D11Effect );
+    // TODO -
 }

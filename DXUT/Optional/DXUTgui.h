@@ -1,15 +1,23 @@
 //--------------------------------------------------------------------------------------
 // File: DXUTgui.h
 //
+// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
+// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+// PARTICULAR PURPOSE.
+//
 // Copyright (c) Microsoft Corporation. All rights reserved.
+//
+// http://go.microsoft.com/fwlink/?LinkId=320437
 //--------------------------------------------------------------------------------------
 #pragma once
-#ifndef DXUT_GUI_H
-#define DXUT_GUI_H
 
 #include <usp10.h>
 #include <dimm.h>
 
+#ifdef DXUT_AUTOLIB
+#pragma comment( lib, "usp10.lib" )
+#endif
 
 //--------------------------------------------------------------------------------------
 // Defines and macros 
@@ -50,8 +58,8 @@ class CDXUTElement;
 struct DXUTElementHolder;
 struct DXUTTextureNode;
 struct DXUTFontNode;
-typedef VOID ( CALLBACK*PCALLBACKDXUTGUIEVENT )( UINT nEvent, int nControlID, CDXUTControl* pControl,
-                                                 void* pUserContext );
+typedef void ( CALLBACK*PCALLBACKDXUTGUIEVENT )( _In_ UINT nEvent, _In_ int nControlID, _In_ CDXUTControl* pControl,
+                                                 _In_opt_ void* pUserContext );
 
 
 //--------------------------------------------------------------------------------------
@@ -85,12 +93,13 @@ enum DXUT_CONTROL_STATE
 
 struct DXUTBlendColor
 {
-    void        Init( D3DCOLOR defaultColor, D3DCOLOR disabledColor = D3DCOLOR_ARGB( 200, 128, 128, 128 ),
-                      D3DCOLOR hiddenColor = 0 );
-    void        Blend( UINT iState, float fElapsedTime, float fRate = 0.7f );
+    void Init( _In_ DWORD defaultColor, _In_ DWORD disabledColor = D3DCOLOR_ARGB( 200, 128, 128, 128 ), _In_ DWORD hiddenColor = 0 );
+    void Blend( _In_ UINT iState, _In_ float fElapsedTime, _In_ float fRate = 0.7f );
 
-    D3DCOLOR    States[ MAX_CONTROL_STATES ]; // Modulate colors for all possible control states
-    D3DXCOLOR Current;
+    DWORD States[ MAX_CONTROL_STATES ]; // Modulate colors for all possible control states
+    DirectX::XMFLOAT4 Current;
+
+    void SetCurrent( DWORD color );
 };
 
 
@@ -100,13 +109,10 @@ struct DXUTBlendColor
 class CDXUTElement
 {
 public:
-    void    SetTexture( UINT iTexture, RECT* prcTexture, D3DCOLOR defaultTextureColor = D3DCOLOR_ARGB( 255, 255, 255,
-                                                                                                       255 ) );
-    void    SetFont( UINT iFont, D3DCOLOR defaultFontColor = D3DCOLOR_ARGB( 255, 255, 255,
-                                                                            255 ), DWORD dwTextFormat = DT_CENTER |
-                     DT_VCENTER );
+    void SetTexture( _In_ UINT texture, _In_ RECT* prcTexture, _In_ DWORD defaultTextureColor = D3DCOLOR_ARGB( 255, 255, 255, 255 ) );
+    void SetFont( _In_ UINT font, _In_ DWORD defaultFontColor = D3DCOLOR_ARGB( 255, 255, 255, 255 ), DWORD textFormat = DT_CENTER | DT_VCENTER );
 
-    void    Refresh();
+    void Refresh();
 
     UINT iTexture;          // Index of the texture for this Element 
     UINT iFont;             // Index of the font for this Element
@@ -128,219 +134,162 @@ class CDXUTDialog
     friend class CDXUTDialogResourceManager;
 
 public:
-                        CDXUTDialog();
-                        ~CDXUTDialog();
+    CDXUTDialog();
+    ~CDXUTDialog();
 
     // Need to call this now
-    void                Init( CDXUTDialogResourceManager* pManager, bool bRegisterDialog = true );
-    void                Init( CDXUTDialogResourceManager* pManager, bool bRegisterDialog,
-                              LPCWSTR pszControlTextureFilename );
-    void                Init( CDXUTDialogResourceManager* pManager, bool bRegisterDialog,
-                              LPCWSTR szControlTextureResourceName, HMODULE hControlTextureResourceModule );
+    void Init( _In_ CDXUTDialogResourceManager* pManager, _In_ bool bRegisterDialog = true );
+    void Init( _In_ CDXUTDialogResourceManager* pManager, _In_ bool bRegisterDialog,
+               _In_z_ LPCWSTR pszControlTextureFilename );
+    void Init( _In_ CDXUTDialogResourceManager* pManager, _In_ bool bRegisterDialog,
+               _In_z_ LPCWSTR szControlTextureResourceName, _In_ HMODULE hControlTextureResourceModule );
 
     // Windows message handler
-    bool                MsgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
+    bool MsgProc( _In_ HWND hWnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam );
 
     // Control creation
-    HRESULT             AddStatic( int ID, LPCWSTR strText, int x, int y, int width, int height, bool bIsDefault=false,
-                                   CDXUTStatic** ppCreated=NULL );
-    HRESULT             AddButton( int ID, LPCWSTR strText, int x, int y, int width, int height, UINT nHotkey=0,
-                                   bool bIsDefault=false, CDXUTButton** ppCreated=NULL );
-    HRESULT             AddCheckBox( int ID, LPCWSTR strText, int x, int y, int width, int height, bool bChecked=false,
-                                     UINT nHotkey=0, bool bIsDefault=false, CDXUTCheckBox** ppCreated=NULL );
-    HRESULT             AddRadioButton( int ID, UINT nButtonGroup, LPCWSTR strText, int x, int y, int width,
-                                        int height, bool bChecked=false, UINT nHotkey=0, bool bIsDefault=false,
-                                        CDXUTRadioButton** ppCreated=NULL );
-    HRESULT             AddComboBox( int ID, int x, int y, int width, int height, UINT nHotKey=0, bool bIsDefault=
-                                     false, CDXUTComboBox** ppCreated=NULL );
-    HRESULT             AddSlider( int ID, int x, int y, int width, int height, int min=0, int max=100, int value=50,
-                                   bool bIsDefault=false, CDXUTSlider** ppCreated=NULL );
+    HRESULT AddStatic( _In_ int ID, _In_z_ LPCWSTR strText, _In_ int x, _In_ int y, _In_ int width, _In_ int height, _In_ bool bIsDefault=false,
+                       _Out_opt_ CDXUTStatic** ppCreated = nullptr );
+    HRESULT AddButton( _In_ int ID, _In_z_ LPCWSTR strText, _In_ int x, _In_ int y, _In_ int width, _In_ int height, _In_ UINT nHotkey=0,
+                       _In_ bool bIsDefault=false, _Out_opt_ CDXUTButton** ppCreated = nullptr );
+    HRESULT AddCheckBox( _In_ int ID, _In_z_ LPCWSTR strText, _In_ int x, _In_ int y, _In_ int width, _In_ int height, _In_ bool bChecked=false,
+                         _In_ UINT nHotkey=0, _In_ bool bIsDefault=false, _Out_opt_ CDXUTCheckBox** ppCreated = nullptr );
+    HRESULT AddRadioButton( _In_ int ID, _In_ UINT nButtonGroup, _In_z_ LPCWSTR strText, _In_ int x, _In_ int y, _In_ int width,
+                            _In_ int height, _In_ bool bChecked=false, _In_ UINT nHotkey=0, _In_ bool bIsDefault=false,
+                            _Out_opt_ CDXUTRadioButton** ppCreated = nullptr );
+    HRESULT AddComboBox( _In_ int ID, _In_ int x, _In_ int y, _In_ int width, _In_ int height, _In_ UINT nHotKey=0, _In_ bool bIsDefault=false,
+                         _Out_opt_ CDXUTComboBox** ppCreated = nullptr );
+    HRESULT AddSlider( _In_ int ID, _In_ int x, _In_ int y, _In_ int width, _In_ int height, _In_ int min=0, _In_ int max=100, _In_ int value=50,
+                       _In_ bool bIsDefault=false, _Out_opt_ CDXUTSlider** ppCreated = nullptr );
     //      AddIMEEditBox has been renamed into DXUTguiIME.cpp as CDXUTIMEEditBox::CreateIMEEditBox
-    HRESULT             AddEditBox( int ID, LPCWSTR strText, int x, int y, int width, int height, bool bIsDefault=
-                                    false, CDXUTEditBox** ppCreated=NULL );
-    HRESULT             AddListBox( int ID, int x, int y, int width, int height, DWORD dwStyle=0,
-                                    CDXUTListBox** ppCreated=NULL );
-    HRESULT             AddControl( CDXUTControl* pControl );
-    HRESULT             InitControl( CDXUTControl* pControl );
+    HRESULT AddEditBox( _In_ int ID, _In_z_ LPCWSTR strText, _In_ int x, _In_ int y, _In_ int width, _In_ int height, _In_ bool bIsDefault=false,
+                        _Out_opt_ CDXUTEditBox** ppCreated = nullptr );
+    HRESULT AddListBox( _In_ int ID, _In_ int x, _In_ int y, _In_ int width, _In_ int height, _In_ DWORD dwStyle=0,
+                        _Out_opt_ CDXUTListBox** ppCreated = nullptr );
+    HRESULT AddControl( _In_ CDXUTControl* pControl );
+    HRESULT InitControl( _In_ CDXUTControl* pControl );
 
     // Control retrieval
-    CDXUTStatic* GetStatic( int ID )
+    CDXUTStatic* GetStatic( _In_ int ID ) const
     {
-        return ( CDXUTStatic* )GetControl( ID, DXUT_CONTROL_STATIC );
+        return reinterpret_cast<CDXUTStatic*>( GetControl( ID, DXUT_CONTROL_STATIC ) );
     }
-    CDXUTButton* GetButton( int ID )
+    CDXUTButton* GetButton( _In_ int ID ) const
     {
-        return ( CDXUTButton* )GetControl( ID, DXUT_CONTROL_BUTTON );
+        return reinterpret_cast<CDXUTButton*>( GetControl(ID, DXUT_CONTROL_BUTTON) );
     }
-    CDXUTCheckBox* GetCheckBox( int ID )
+    CDXUTCheckBox* GetCheckBox( _In_ int ID ) const
     {
-        return ( CDXUTCheckBox* )GetControl( ID, DXUT_CONTROL_CHECKBOX );
+        return reinterpret_cast<CDXUTCheckBox*>( GetControl(ID, DXUT_CONTROL_CHECKBOX) );
     }
-    CDXUTRadioButton* GetRadioButton( int ID )
+    CDXUTRadioButton* GetRadioButton( _In_ int ID ) const
     {
-        return ( CDXUTRadioButton* )GetControl( ID, DXUT_CONTROL_RADIOBUTTON );
+        return reinterpret_cast<CDXUTRadioButton*>( GetControl(ID, DXUT_CONTROL_RADIOBUTTON) );
     }
-    CDXUTComboBox* GetComboBox( int ID )
+    CDXUTComboBox* GetComboBox( _In_ int ID ) const
     {
-        return ( CDXUTComboBox* )GetControl( ID, DXUT_CONTROL_COMBOBOX );
+        return reinterpret_cast<CDXUTComboBox*>( GetControl(ID, DXUT_CONTROL_COMBOBOX) );
     }
-    CDXUTSlider* GetSlider( int ID )
+    CDXUTSlider* GetSlider( _In_ int ID ) const
     {
-        return ( CDXUTSlider* )GetControl( ID, DXUT_CONTROL_SLIDER );
+        return reinterpret_cast<CDXUTSlider*>( GetControl(ID, DXUT_CONTROL_SLIDER) );
     }
-    CDXUTEditBox* GetEditBox( int ID )
+    CDXUTEditBox* GetEditBox( _In_ int ID ) const
     {
-        return ( CDXUTEditBox* )GetControl( ID, DXUT_CONTROL_EDITBOX );
+        return reinterpret_cast<CDXUTEditBox*>( GetControl(ID, DXUT_CONTROL_EDITBOX) );
     }
-    CDXUTListBox* GetListBox( int ID )
+    CDXUTListBox* GetListBox( _In_ int ID ) const
     {
-        return ( CDXUTListBox* )GetControl( ID, DXUT_CONTROL_LISTBOX );
+        return reinterpret_cast<CDXUTListBox*>( GetControl(ID, DXUT_CONTROL_LISTBOX) );
     }
 
-    CDXUTControl* GetControl( int ID );
-    CDXUTControl* GetControl( int ID, UINT nControlType );
-    CDXUTControl* GetControlAtPoint( POINT pt );
+    CDXUTControl* GetControl( _In_ int ID ) const;
+    CDXUTControl* GetControl( _In_ int ID, _In_ UINT nControlType ) const;
+    CDXUTControl* GetControlAtPoint( _In_ const POINT& pt ) const;
 
-    bool                GetControlEnabled( int ID );
-    void                SetControlEnabled( int ID, bool bEnabled );
+    bool GetControlEnabled( _In_ int ID ) const;
+    void SetControlEnabled( _In_ int ID, _In_ bool bEnabled );
 
-    void                ClearRadioButtonGroup( UINT nGroup );
-    void                ClearComboBox( int ID );
+    void ClearRadioButtonGroup( _In_ UINT nGroup );
+    void ClearComboBox( _In_ int ID );
 
     // Access the default display Elements used when adding new controls
-    HRESULT             SetDefaultElement( UINT nControlType, UINT iElement, CDXUTElement* pElement );
-    CDXUTElement* GetDefaultElement( UINT nControlType, UINT iElement );
+    HRESULT SetDefaultElement( _In_ UINT nControlType, _In_ UINT iElement, _In_ CDXUTElement* pElement );
+    CDXUTElement* GetDefaultElement( _In_ UINT nControlType, _In_ UINT iElement ) const;
 
     // Methods called by controls
-    void                SendEvent( UINT nEvent, bool bTriggeredByUser, CDXUTControl* pControl );
-    void                RequestFocus( CDXUTControl* pControl );
+    void SendEvent( _In_ UINT nEvent, _In_ bool bTriggeredByUser, _In_ CDXUTControl* pControl );
+    void RequestFocus( _In_ CDXUTControl* pControl );
 
     // Render helpers
-    HRESULT             DrawRect( RECT* pRect, D3DCOLOR color );
-    HRESULT             DrawRect9( RECT* pRect, D3DCOLOR color );
-    HRESULT             DrawPolyLine( POINT* apPoints, UINT nNumPoints, D3DCOLOR color );
-    HRESULT             DrawSprite( CDXUTElement* pElement, RECT* prcDest, float fDepth );
-    HRESULT             DrawSprite9( CDXUTElement* pElement, RECT* prcDest );
-    HRESULT             DrawSprite11( CDXUTElement* pElement, RECT* prcDest, float fDepth );
-    HRESULT             CalcTextRect( LPCWSTR strText, CDXUTElement* pElement, RECT* prcDest, int nCount = -1 );
-    HRESULT             DrawText( LPCWSTR strText, CDXUTElement* pElement, RECT* prcDest, bool bShadow = false,
-                                  int nCount = -1, bool bCenter = false  );
-    HRESULT             DrawText9( LPCWSTR strText, CDXUTElement* pElement, RECT* prcDest, bool bShadow = false,
-                                   int nCount = -1 );
-    HRESULT             DrawText11( ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3d11DeviceContext,
-                                    LPCWSTR strText, CDXUTElement* pElement, RECT* prcDest, bool bShadow = false,
-                                    int nCount = -1, bool bCenter = false );
+    HRESULT DrawRect( _In_ const RECT* pRect, _In_ DWORD color );
+    HRESULT DrawSprite( _In_ CDXUTElement* pElement, _In_ const RECT* prcDest, _In_ float fDepth );
+    HRESULT DrawSprite11( _In_ CDXUTElement* pElement, _In_ const RECT* prcDest, _In_ float fDepth );
+    HRESULT CalcTextRect( _In_z_ LPCWSTR strText, _In_ CDXUTElement* pElement, _In_ const RECT* prcDest, _In_ int nCount = -1 );
+    HRESULT DrawText( _In_z_ LPCWSTR strText, _In_ CDXUTElement* pElement, _In_ const RECT* prcDest, _In_ bool bShadow = false,
+                      _In_ bool bCenter = false  );
 
     // Attributes
-    bool                GetVisible()
+    bool GetVisible() const { return m_bVisible; }
+    void SetVisible( _In_ bool bVisible ) { m_bVisible = bVisible; }
+    bool GetMinimized() const { return m_bMinimized; }
+    void SetMinimized( _In_ bool bMinimized ) {m_bMinimized = bMinimized; }
+    void SetBackgroundColors( _In_ DWORD colorAllCorners ) { SetBackgroundColors( colorAllCorners, colorAllCorners, colorAllCorners, colorAllCorners ); }
+    void SetBackgroundColors( _In_ DWORD colorTopLeft, _In_ DWORD colorTopRight, _In_ DWORD colorBottomLeft, _In_ DWORD colorBottomRight );
+    void EnableCaption( _In_ bool bEnable ) { m_bCaption = bEnable; }
+    int GetCaptionHeight() const { return m_nCaptionHeight; }
+    void SetCaptionHeight( _In_ int nHeight ) { m_nCaptionHeight = nHeight; }
+    void SetCaptionText( _In_ const WCHAR* pwszText ) { wcscpy_s( m_wszCaption, sizeof( m_wszCaption ) / sizeof( m_wszCaption[0] ), pwszText ); }
+    void GetLocation( _Out_ POINT& Pt ) const
     {
-        return m_bVisible;
+        Pt.x = m_x;
+        Pt.y = m_y;
     }
-    void                SetVisible( bool bVisible )
+    void SetLocation( _In_ int x, _In_ int y )
     {
-        m_bVisible = bVisible;
+        m_x = x;
+        m_y = y;
     }
-    bool                GetMinimized()
+    void SetSize( _In_ int width, _In_ int height )
     {
-        return m_bMinimized;
+        m_width = width;
+        m_height = height;
     }
-    void                SetMinimized( bool bMinimized )
-    {
-        m_bMinimized = bMinimized;
-    }
-    void                SetBackgroundColors( D3DCOLOR colorAllCorners )
-    {
-        SetBackgroundColors( colorAllCorners, colorAllCorners, colorAllCorners, colorAllCorners );
-    }
-    void                SetBackgroundColors( D3DCOLOR colorTopLeft, D3DCOLOR colorTopRight, D3DCOLOR colorBottomLeft,
-                                             D3DCOLOR colorBottomRight );
-    void                EnableCaption( bool bEnable )
-    {
-        m_bCaption = bEnable;
-    }
-    int                 GetCaptionHeight() const
-    {
-        return m_nCaptionHeight;
-    }
-    void                SetCaptionHeight( int nHeight )
-    {
-        m_nCaptionHeight = nHeight;
-    }
-    void                SetCaptionText( const WCHAR* pwszText )
-    {
-        wcscpy_s( m_wszCaption, sizeof( m_wszCaption ) / sizeof( m_wszCaption[0] ), pwszText );
-    }
-    void                GetLocation( POINT& Pt ) const
-    {
-        Pt.x = m_x; Pt.y = m_y;
-    }
-    void                SetLocation( int x, int y )
-    {
-        m_x = x; m_y = y;
-    }
-    void                SetSize( int width, int height )
-    {
-        m_width = width; m_height = height;
-    }
-    int                 GetWidth()
-    {
-        return m_width;
-    }
-    int                 GetHeight()
-    {
-        return m_height;
-    }
+    int GetWidth() const { return m_width; }
+    int GetHeight() const { return m_height; }
 
-    static void WINAPI  SetRefreshTime( float fTime )
-    {
-        s_fTimeRefresh = fTime;
-    }
+    static void WINAPI SetRefreshTime( _In_ float fTime ) { s_fTimeRefresh = fTime; }
 
-    static CDXUTControl* WINAPI GetNextControl( CDXUTControl* pControl );
-    static CDXUTControl* WINAPI GetPrevControl( CDXUTControl* pControl );
+    static CDXUTControl* WINAPI GetNextControl( _In_ CDXUTControl* pControl );
+    static CDXUTControl* WINAPI GetPrevControl( _In_ CDXUTControl* pControl );
 
-    void                RemoveControl( int ID );
-    void                RemoveAllControls();
+    void RemoveControl( _In_ int ID );
+    void RemoveAllControls();
 
     // Sets the callback used to notify the app of control events
-    void                SetCallback( PCALLBACKDXUTGUIEVENT pCallback, void* pUserContext = NULL );
-    void                EnableNonUserEvents( bool bEnable )
-    {
-        m_bNonUserEvents = bEnable;
-    }
-    void                EnableKeyboardInput( bool bEnable )
-    {
-        m_bKeyboardInput = bEnable;
-    }
-    void                EnableMouseInput( bool bEnable )
-    {
-        m_bMouseInput = bEnable;
-    }
-    bool                IsKeyboardInputEnabled() const
-    {
-        return m_bKeyboardInput;
-    }
+    void SetCallback( _In_ PCALLBACKDXUTGUIEVENT pCallback, _In_opt_ void* pUserContext = nullptr );
+    void EnableNonUserEvents( _In_ bool bEnable ) { m_bNonUserEvents = bEnable; }
+    void EnableKeyboardInput( _In_ bool bEnable ) { m_bKeyboardInput = bEnable; }
+    void EnableMouseInput( _In_ bool bEnable ) { m_bMouseInput = bEnable; }
+    bool IsKeyboardInputEnabled() const { return m_bKeyboardInput; }
 
     // Device state notification
-    void                Refresh();
-    HRESULT             OnRender( float fElapsedTime );
+    void Refresh();
+    HRESULT OnRender( _In_ float fElapsedTime );
 
     // Shared resource access. Indexed fonts and textures are shared among
     // all the controls.
-    HRESULT             SetFont( UINT index, LPCWSTR strFaceName, LONG height, LONG weight );
-    DXUTFontNode* GetFont( UINT index );
+    HRESULT SetFont( _In_ UINT index, _In_z_ LPCWSTR strFaceName, _In_ LONG height, _In_ LONG weight );
+    DXUTFontNode* GetFont( _In_ UINT index ) const;
 
-    HRESULT             SetTexture( UINT index, LPCWSTR strFilename );
-    HRESULT             SetTexture( UINT index, LPCWSTR strResourceName, HMODULE hResourceModule );
-    DXUTTextureNode* GetTexture( UINT index );
+    HRESULT SetTexture( _In_ UINT index, _In_z_ LPCWSTR strFilename );
+    HRESULT SetTexture( _In_ UINT index, _In_z_ LPCWSTR strResourceName, _In_ HMODULE hResourceModule );
+    DXUTTextureNode* GetTexture( _In_ UINT index ) const;
 
-    CDXUTDialogResourceManager* GetManager()
-    {
-        return m_pManager;
-    }
+    CDXUTDialogResourceManager* GetManager() const { return m_pManager; }
 
     static void WINAPI  ClearFocus();
-    void                FocusDefaultControl();
+    void FocusDefaultControl();
 
     bool m_bNonUserEvents;
     bool m_bKeyboardInput;
@@ -349,24 +298,20 @@ public:
 private:
     int m_nDefaultControlID;
 
-    HRESULT             OnRender9( float fElapsedTime );
-    HRESULT             OnRender10( float fElapsedTime );
-    HRESULT             OnRender11( float fElapsedTime );
-
     static double s_fTimeRefresh;
     double m_fTimeLastRefresh;
 
     // Initialize default Elements
-    void                InitDefaultElements();
+    void InitDefaultElements();
 
     // Windows message handlers
-    void                OnMouseMove( POINT pt );
-    void                OnMouseUp( POINT pt );
+    void OnMouseMove( _In_ const POINT& pt );
+    void OnMouseUp( _In_ const POINT& pt );
 
-    void                SetNextDialog( CDXUTDialog* pNextDialog );
+    void SetNextDialog( _In_ CDXUTDialog* pNextDialog );
 
     // Control events
-    bool                OnCycleFocus( bool bForward );
+    bool OnCycleFocus( _In_ bool bForward );
 
     static CDXUTControl* s_pControlFocus;        // The control which has focus
     static CDXUTControl* s_pControlPressed;      // The control currently pressed
@@ -377,7 +322,7 @@ private:
     bool m_bCaption;
     bool m_bMinimized;
     bool m_bDrag;
-    WCHAR               m_wszCaption[256];
+    WCHAR m_wszCaption[256];
 
     int m_x;
     int m_y;
@@ -385,20 +330,20 @@ private:
     int m_height;
     int m_nCaptionHeight;
 
-    D3DCOLOR m_colorTopLeft;
-    D3DCOLOR m_colorTopRight;
-    D3DCOLOR m_colorBottomLeft;
-    D3DCOLOR m_colorBottomRight;
+    DWORD m_colorTopLeft;
+    DWORD m_colorTopRight;
+    DWORD m_colorBottomLeft;
+    DWORD m_colorBottomRight;
 
     CDXUTDialogResourceManager* m_pManager;
     PCALLBACKDXUTGUIEVENT m_pCallbackEvent;
     void* m_pCallbackEventUserContext;
 
-    CGrowableArray <int> m_Textures;   // Index into m_TextureCache;
-    CGrowableArray <int> m_Fonts;      // Index into m_FontCache;
+    std::vector<int> m_Textures;   // Index into m_TextureCache;
+    std::vector<int> m_Fonts;      // Index into m_FontCache;
 
-    CGrowableArray <CDXUTControl*> m_Controls;
-    CGrowableArray <DXUTElementHolder*> m_DefaultElements;
+    std::vector<CDXUTControl*> m_Controls;
+    std::vector<DXUTElementHolder*> m_DefaultElements;
 
     CDXUTElement m_CapElement;  // Element for the caption
 
@@ -418,7 +363,6 @@ struct DXUTTextureNode
     WCHAR strFilename[MAX_PATH];
     DWORD dwWidth;
     DWORD dwHeight;
-    IDirect3DTexture9* pTexture9;
     ID3D11Texture2D* pTexture11;
     ID3D11ShaderResourceView* pTexResView11;
 };
@@ -428,15 +372,15 @@ struct DXUTFontNode
     WCHAR strFace[MAX_PATH];
     LONG nHeight;
     LONG nWeight;
-    ID3DXFont* pFont9;
 };
 
 struct DXUTSpriteVertex
 {
-    D3DXVECTOR3 vPos;
-    D3DXCOLOR vColor;
-    D3DXVECTOR2 vTex;
+    DirectX::XMFLOAT3 vPos;
+    DirectX::XMFLOAT4 vColor;
+    DirectX::XMFLOAT2 vTex;
 };
+
 
 //-----------------------------------------------------------------------------
 // Manages shared resources of dialogs
@@ -444,63 +388,38 @@ struct DXUTSpriteVertex
 class CDXUTDialogResourceManager
 {
 public:
-            CDXUTDialogResourceManager();
-            ~CDXUTDialogResourceManager();
+    CDXUTDialogResourceManager();
+    ~CDXUTDialogResourceManager();
 
-    bool    MsgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
-
-    // D3D9 specific
-    HRESULT OnD3D9CreateDevice( LPDIRECT3DDEVICE9 pd3dDevice );
-    HRESULT OnD3D9ResetDevice();
-    void    OnD3D9LostDevice();
-    void    OnD3D9DestroyDevice();
-    IDirect3DDevice9* GetD3D9Device()
-    {
-        return m_pd3d9Device;
-    }
+    bool MsgProc( _In_ HWND hWnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam );
 
     // D3D11 specific
-    HRESULT OnD3D11CreateDevice( ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3d11DeviceContext );
-    HRESULT OnD3D11ResizedSwapChain( ID3D11Device* pd3dDevice, const DXGI_SURFACE_DESC* pBackBufferSurfaceDesc );
-    void    OnD3D11ReleasingSwapChain();
-    void    OnD3D11DestroyDevice();
-    void    StoreD3D11State( ID3D11DeviceContext* pd3dImmediateContext );
-    void    RestoreD3D11State( ID3D11DeviceContext* pd3dImmediateContext );
-    void    ApplyRenderUI11( ID3D11DeviceContext* pd3dImmediateContext );
-    void	ApplyRenderUIUntex11( ID3D11DeviceContext* pd3dImmediateContext );
-    void	BeginSprites11( );
-    void	EndSprites11( ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3dImmediateContext );
-    ID3D11Device* GetD3D11Device()
-    {
-        return m_pd3d11Device;
-    }
-    ID3D11DeviceContext* GetD3D11DeviceContext()
-    {
-        return m_pd3d11DeviceContext;
-    }
+    HRESULT OnD3D11CreateDevice( _In_ ID3D11Device* pd3dDevice, _In_ ID3D11DeviceContext* pd3d11DeviceContext );
+    HRESULT OnD3D11ResizedSwapChain( _In_ ID3D11Device* pd3dDevice, _In_ const DXGI_SURFACE_DESC* pBackBufferSurfaceDesc );
+    void OnD3D11ReleasingSwapChain();
+    void OnD3D11DestroyDevice();
+    void StoreD3D11State( _In_ ID3D11DeviceContext* pd3dImmediateContext );
+    void RestoreD3D11State( _In_ ID3D11DeviceContext* pd3dImmediateContext );
+    void ApplyRenderUI11( _In_ ID3D11DeviceContext* pd3dImmediateContext );
+    void ApplyRenderUIUntex11( _In_ ID3D11DeviceContext* pd3dImmediateContext );
+    void BeginSprites11( );
+    void EndSprites11( _In_ ID3D11Device* pd3dDevice, _In_ ID3D11DeviceContext* pd3dImmediateContext );
 
-    DXUTFontNode* GetFontNode( int iIndex )
-    {
-        return m_FontCache.GetAt( iIndex );
-    };
-    DXUTTextureNode* GetTextureNode( int iIndex )
-    {
-        return m_TextureCache.GetAt( iIndex );
-    };
+    ID3D11Device* GetD3D11Device() const { return m_pd3d11Device; }
+    ID3D11DeviceContext* GetD3D11DeviceContext() const { return m_pd3d11DeviceContext; }
 
-    int     AddFont( LPCWSTR strFaceName, LONG height, LONG weight );
-    int     AddTexture( LPCWSTR strFilename );
-    int     AddTexture( LPCWSTR strResourceName, HMODULE hResourceModule );
+    DXUTFontNode* GetFontNode( _In_ size_t iIndex ) const { return m_FontCache[ iIndex ]; }
+    DXUTTextureNode* GetTextureNode( _In_ size_t iIndex ) const { return m_TextureCache[ iIndex ]; }
 
-    bool    RegisterDialog( CDXUTDialog* pDialog );
-    void    UnregisterDialog( CDXUTDialog* pDialog );
-    void    EnableKeyboardInputForAllDialogs();
+    int AddFont( _In_z_ LPCWSTR strFaceName, _In_ LONG height, _In_ LONG weight );
+    int AddTexture( _In_z_ LPCWSTR strFilename );
+    int AddTexture( _In_z_ LPCWSTR strResourceName, _In_ HMODULE hResourceModule );
+
+    bool RegisterDialog( _In_ CDXUTDialog* pDialog );
+    void UnregisterDialog( _In_ CDXUTDialog* pDialog );
+    void EnableKeyboardInputForAllDialogs();
 
     // Shared between all dialogs
-
-    // D3D9
-    IDirect3DStateBlock9* m_pStateBlock;
-    ID3DXSprite* m_pSprite;          // Sprite used for drawing
 
     // D3D11
     // Shaders
@@ -529,34 +448,23 @@ public:
     // Sprite workaround
     ID3D11Buffer* m_pSpriteBuffer11;
     UINT m_SpriteBufferBytes11;
-    CGrowableArray<DXUTSpriteVertex> m_SpriteVertices;
+    std::vector<DXUTSpriteVertex> m_SpriteVertices;
 
     UINT m_nBackBufferWidth;
     UINT m_nBackBufferHeight;
 
-    CGrowableArray <CDXUTDialog*> m_Dialogs;            // Dialogs registered
+    std::vector<CDXUTDialog*> m_Dialogs;            // Dialogs registered
 
 protected:
-    // D3D9 specific
-    IDirect3DDevice9* m_pd3d9Device;
-    HRESULT CreateFont9( UINT index );
-    HRESULT CreateTexture9( UINT index );
-
     // D3D11 specific
     ID3D11Device* m_pd3d11Device;
     ID3D11DeviceContext* m_pd3d11DeviceContext;
-    HRESULT CreateFont11( UINT index );
-    HRESULT CreateTexture11( UINT index );
+    HRESULT CreateTexture11( _In_ UINT index );
 
-    CGrowableArray <DXUTTextureNode*> m_TextureCache;   // Shared textures
-    CGrowableArray <DXUTFontNode*> m_FontCache;         // Shared fonts
+    std::vector<DXUTTextureNode*> m_TextureCache;   // Shared textures
+    std::vector<DXUTFontNode*> m_FontCache;         // Shared fonts
 };
 
-void BeginText11();
-void DrawText11DXUT( ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3d11DeviceContext,
-                 LPCWSTR strText, RECT rcScreen, D3DXCOLOR vFontColor,
-                 float fBBWidth, float fBBHeight, bool bCenter );
-void EndText11( ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3d11DeviceContext );
 
 //-----------------------------------------------------------------------------
 // Base class for controls
@@ -564,126 +472,79 @@ void EndText11( ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3d11DeviceConte
 class CDXUTControl
 {
 public:
-                    CDXUTControl( CDXUTDialog* pDialog = NULL );
-    virtual         ~CDXUTControl();
+    CDXUTControl( _In_opt_ CDXUTDialog* pDialog = nullptr );
+    virtual ~CDXUTControl();
 
-    virtual HRESULT OnInit()
-    {
-        return S_OK;
-    }
-    virtual void    Refresh();
-    virtual void    Render( float fElapsedTime )
-    {
-    };
+    virtual HRESULT OnInit() { return S_OK; }
+    virtual void Refresh();
+    virtual void Render( _In_ float fElapsedTime ) { UNREFERENCED_PARAMETER(fElapsedTime); }
 
     // Windows message handler
-    virtual bool    MsgProc( UINT uMsg, WPARAM wParam, LPARAM lParam )
+    virtual bool MsgProc( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam )
     {
+        UNREFERENCED_PARAMETER(uMsg);
+        UNREFERENCED_PARAMETER(wParam);
+        UNREFERENCED_PARAMETER(lParam);
         return false;
     }
 
-    virtual bool    HandleKeyboard( UINT uMsg, WPARAM wParam, LPARAM lParam )
+    virtual bool HandleKeyboard( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam )
     {
+        UNREFERENCED_PARAMETER(uMsg);
+        UNREFERENCED_PARAMETER(wParam);
+        UNREFERENCED_PARAMETER(lParam);
         return false;
     }
-    virtual bool    HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lParam )
+    virtual bool HandleMouse( _In_ UINT uMsg, _In_ const POINT& pt, _In_ WPARAM wParam, _In_ LPARAM lParam )
     {
+        UNREFERENCED_PARAMETER(uMsg);
+        UNREFERENCED_PARAMETER(pt);
+        UNREFERENCED_PARAMETER(wParam);
+        UNREFERENCED_PARAMETER(lParam);
         return false;
     }
 
-    virtual bool    CanHaveFocus()
+    virtual bool CanHaveFocus() { return false; }
+    virtual void OnFocusIn() { m_bHasFocus = true; }
+    virtual void OnFocusOut() { m_bHasFocus = false; }
+    virtual void OnMouseEnter() { m_bMouseOver = true; }
+    virtual void OnMouseLeave() { m_bMouseOver = false; }
+    virtual void OnHotkey() { }
+
+    virtual bool ContainsPoint( _In_ const POINT& pt ) { return PtInRect( &m_rcBoundingBox, pt ) != 0; }
+
+    virtual void SetEnabled( _In_ bool bEnabled ) { m_bEnabled = bEnabled; }
+    virtual bool GetEnabled() const { return m_bEnabled; }
+    virtual void SetVisible( _In_ bool bVisible ) { m_bVisible = bVisible; }
+    virtual bool GetVisible() const { return m_bVisible; }
+
+    UINT GetType() const { return m_Type; }
+
+    int GetID() const { return m_ID; }
+    void SetID( _In_ int ID ) { m_ID = ID; }
+
+    void SetLocation( _In_ int x, _In_ int y )
     {
-        return false;
+        m_x = x;
+        m_y = y;
+        UpdateRects();
     }
-    virtual void    OnFocusIn()
+    void SetSize( int width, int height )
     {
-        m_bHasFocus = true;
-    }
-    virtual void    OnFocusOut()
-    {
-        m_bHasFocus = false;
-    }
-    virtual void    OnMouseEnter()
-    {
-        m_bMouseOver = true;
-    }
-    virtual void    OnMouseLeave()
-    {
-        m_bMouseOver = false;
-    }
-    virtual void    OnHotkey()
-    {
+        m_width = width;
+        m_height = height;
+        UpdateRects();
     }
 
-    virtual BOOL    ContainsPoint( POINT pt )
-    {
-        return PtInRect( &m_rcBoundingBox, pt );
-    }
+    void SetHotkey( _In_ UINT nHotkey ) { m_nHotkey = nHotkey; }
+    UINT GetHotkey() const { return m_nHotkey; }
 
-    virtual void    SetEnabled( bool bEnabled )
-    {
-        m_bEnabled = bEnabled;
-    }
-    virtual bool    GetEnabled()
-    {
-        return m_bEnabled;
-    }
-    virtual void    SetVisible( bool bVisible )
-    {
-        m_bVisible = bVisible;
-    }
-    virtual bool    GetVisible()
-    {
-        return m_bVisible;
-    }
+    void SetUserData( _In_opt_ void* pUserData ) { m_pUserData = pUserData; }
+    void* GetUserData() const { return m_pUserData; }
 
-    UINT            GetType() const
-    {
-        return m_Type;
-    }
-
-    int             GetID() const
-    {
-        return m_ID;
-    }
-    void            SetID( int ID )
-    {
-        m_ID = ID;
-    }
-
-    void            SetLocation( int x, int y )
-    {
-        m_x = x; m_y = y; UpdateRects();
-    }
-    void            SetSize( int width, int height )
-    {
-        m_width = width; m_height = height; UpdateRects();
-    }
-
-    void            SetHotkey( UINT nHotkey )
-    {
-        m_nHotkey = nHotkey;
-    }
-    UINT            GetHotkey()
-    {
-        return m_nHotkey;
-    }
-
-    void            SetUserData( void* pUserData )
-    {
-        m_pUserData = pUserData;
-    }
-    void* GetUserData() const
-    {
-        return m_pUserData;
-    }
-
-    virtual void    SetTextColor( D3DCOLOR Color );
-    CDXUTElement* GetElement( UINT iElement )
-    {
-        return m_Elements.GetAt( iElement );
-    }
-    HRESULT         SetElement( UINT iElement, CDXUTElement* pElement );
+    virtual void SetTextColor( _In_ DWORD Color );
+    CDXUTElement* GetElement( _In_ UINT iElement ) const { return m_Elements[ iElement ]; }
+    HRESULT SetElement( _In_ UINT iElement, _In_ CDXUTElement* pElement );
 
     bool m_bVisible;                // Shown/hidden flag
     bool m_bMouseOver;              // Mouse pointer is above control
@@ -698,10 +559,10 @@ public:
     CDXUTDialog* m_pDialog;    // Parent container
     UINT m_Index;              // Index within the control list
 
-    CGrowableArray <CDXUTElement*> m_Elements;  // All display elements
+    std::vector<CDXUTElement*> m_Elements;  // All display elements
 
 protected:
-    virtual void    UpdateRects();
+    virtual void UpdateRects();
 
     int m_ID;                 // ID number
     DXUT_CONTROL_TYPE m_Type;  // Control type, set once in constructor  
@@ -732,25 +593,21 @@ struct DXUTElementHolder
 class CDXUTStatic : public CDXUTControl
 {
 public:
-                    CDXUTStatic( CDXUTDialog* pDialog = NULL );
+    CDXUTStatic( _In_opt_ CDXUTDialog* pDialog = nullptr );
 
-    virtual void    Render( float fElapsedTime );
-    virtual BOOL    ContainsPoint( POINT pt )
+    virtual void Render( _In_ float fElapsedTime ) override;
+    virtual bool ContainsPoint( _In_ const POINT& pt ) override
     {
+        UNREFERENCED_PARAMETER( pt );
         return false;
     }
 
-    HRESULT         GetTextCopy( __out_ecount(bufferCount) LPWSTR strDest, 
-                                 UINT bufferCount );
-    LPCWSTR         GetText()
-    {
-        return m_strText;
-    }
-    HRESULT         SetText( LPCWSTR strText );
-
+    HRESULT GetTextCopy( _Out_writes_(bufferCount) LPWSTR strDest, _In_ UINT bufferCount ) const;
+    LPCWSTR GetText() const { return m_strText; }
+    HRESULT SetText( _In_z_ LPCWSTR strText );
 
 protected:
-    WCHAR           m_strText[MAX_PATH];      // Window text  
+    WCHAR m_strText[MAX_PATH];      // Window text  
 };
 
 
@@ -760,26 +617,26 @@ protected:
 class CDXUTButton : public CDXUTStatic
 {
 public:
-                    CDXUTButton( CDXUTDialog* pDialog = NULL );
+    CDXUTButton( _In_opt_ CDXUTDialog* pDialog = nullptr );
 
-    virtual bool    HandleKeyboard( UINT uMsg, WPARAM wParam, LPARAM lParam );
-    virtual bool    HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lParam );
-    virtual void    OnHotkey()
+    virtual bool HandleKeyboard( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual bool HandleMouse( _In_ UINT uMsg, _In_ const POINT& pt, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual void OnHotkey() override
     {
         if( m_pDialog->IsKeyboardInputEnabled() ) m_pDialog->RequestFocus( this );
         m_pDialog->SendEvent( EVENT_BUTTON_CLICKED, true, this );
     }
 
-    virtual BOOL    ContainsPoint( POINT pt )
+    virtual bool ContainsPoint( _In_ const POINT& pt ) override
     {
-        return PtInRect( &m_rcBoundingBox, pt );
+        return PtInRect( &m_rcBoundingBox, pt ) != 0;
     }
-    virtual bool    CanHaveFocus()
+    virtual bool CanHaveFocus() override
     {
         return ( m_bVisible && m_bEnabled );
     }
 
-    virtual void    Render( float fElapsedTime );
+    virtual void Render( _In_ float fElapsedTime ) override;
 
 protected:
     bool m_bPressed;
@@ -792,32 +649,26 @@ protected:
 class CDXUTCheckBox : public CDXUTButton
 {
 public:
-                    CDXUTCheckBox( CDXUTDialog* pDialog = NULL );
+    CDXUTCheckBox( _In_opt_ CDXUTDialog* pDialog = nullptr );
 
-    virtual bool    HandleKeyboard( UINT uMsg, WPARAM wParam, LPARAM lParam );
-    virtual bool    HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lParam );
-    virtual void    OnHotkey()
+    virtual bool HandleKeyboard( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual bool HandleMouse( _In_ UINT uMsg, _In_ const POINT& pt, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual void OnHotkey() override
     {
         if( m_pDialog->IsKeyboardInputEnabled() ) m_pDialog->RequestFocus( this );
         SetCheckedInternal( !m_bChecked, true );
     }
 
-    virtual BOOL    ContainsPoint( POINT pt );
-    virtual void    UpdateRects();
+    virtual bool ContainsPoint( _In_ const POINT& pt ) override;
+    virtual void UpdateRects() override;
 
-    virtual void    Render( float fElapsedTime );
+    virtual void Render( _In_ float fElapsedTime ) override;
 
-    bool            GetChecked()
-    {
-        return m_bChecked;
-    }
-    void            SetChecked( bool bChecked )
-    {
-        SetCheckedInternal( bChecked, false );
-    }
+    bool GetChecked() const { return m_bChecked; }
+    void SetChecked( _In_ bool bChecked ) { SetCheckedInternal( bChecked, false ); }
 
 protected:
-    virtual void    SetCheckedInternal( bool bChecked, bool bFromInput );
+    virtual void SetCheckedInternal( _In_ bool bChecked, _In_ bool bFromInput );
 
     bool m_bChecked;
     RECT m_rcButton;
@@ -831,31 +682,22 @@ protected:
 class CDXUTRadioButton : public CDXUTCheckBox
 {
 public:
-                    CDXUTRadioButton( CDXUTDialog* pDialog = NULL );
+    CDXUTRadioButton( _In_opt_ CDXUTDialog* pDialog = nullptr );
 
-    virtual bool    HandleKeyboard( UINT uMsg, WPARAM wParam, LPARAM lParam );
-    virtual bool    HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lParam );
-    virtual void    OnHotkey()
+    virtual bool HandleKeyboard( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual bool HandleMouse( _In_ UINT uMsg, _In_ const POINT& pt, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual void OnHotkey() override
     {
         if( m_pDialog->IsKeyboardInputEnabled() ) m_pDialog->RequestFocus( this );
         SetCheckedInternal( true, true, true );
     }
 
-    void            SetChecked( bool bChecked, bool bClearGroup=true )
-    {
-        SetCheckedInternal( bChecked, bClearGroup, false );
-    }
-    void            SetButtonGroup( UINT nButtonGroup )
-    {
-        m_nButtonGroup = nButtonGroup;
-    }
-    UINT            GetButtonGroup()
-    {
-        return m_nButtonGroup;
-    }
+    void SetChecked( _In_ bool bChecked, _In_ bool bClearGroup=true ) { SetCheckedInternal( bChecked, bClearGroup, false ); }
+    void SetButtonGroup( _In_ UINT nButtonGroup ) { m_nButtonGroup = nButtonGroup; }
+    UINT GetButtonGroup() const { return m_nButtonGroup; }
 
 protected:
-    virtual void    SetCheckedInternal( bool bChecked, bool bClearGroup, bool bFromInput );
+    virtual void SetCheckedInternal( _In_ bool bChecked, _In_ bool bClearGroup, _In_ bool bFromInput );
     UINT m_nButtonGroup;
 };
 
@@ -866,36 +708,34 @@ protected:
 class CDXUTScrollBar : public CDXUTControl
 {
 public:
-                    CDXUTScrollBar( CDXUTDialog* pDialog = NULL );
-    virtual         ~CDXUTScrollBar();
+    CDXUTScrollBar( _In_opt_ CDXUTDialog* pDialog = nullptr );
+    virtual ~CDXUTScrollBar();
 
-    virtual bool    HandleKeyboard( UINT uMsg, WPARAM wParam, LPARAM lParam );
-    virtual bool    HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lParam );
-    virtual bool    MsgProc( UINT uMsg, WPARAM wParam, LPARAM lParam );
+    virtual bool HandleKeyboard( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual bool HandleMouse( _In_ UINT uMsg, _In_ const POINT& pt, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual bool MsgProc( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
 
-    virtual void    Render( float fElapsedTime );
-    virtual void    UpdateRects();
+    virtual void Render( _In_ float fElapsedTime ) override;
+    virtual void UpdateRects() override;
 
-    void            SetTrackRange( int nStart, int nEnd );
-    int             GetTrackPos()
+    void SetTrackRange( _In_ int nStart, _In_ int nEnd );
+    int GetTrackPos() const { return m_nPosition; }
+    void SetTrackPos( _In_ int nPosition )
     {
-        return m_nPosition;
+        m_nPosition = nPosition;
+        Cap();
+        UpdateThumbRect();
     }
-    void            SetTrackPos( int nPosition )
+    int GetPageSize() const { return m_nPageSize; }
+    void SetPageSize( _In_ int nPageSize )
     {
-        m_nPosition = nPosition; Cap(); UpdateThumbRect();
-    }
-    int             GetPageSize()
-    {
-        return m_nPageSize;
-    }
-    void            SetPageSize( int nPageSize )
-    {
-        m_nPageSize = nPageSize; Cap(); UpdateThumbRect();
+        m_nPageSize = nPageSize;
+        Cap();
+        UpdateThumbRect();
     }
 
-    void            Scroll( int nDelta );    // Scroll by nDelta items (plus or minus)
-    void            ShowItem( int nIndex );  // Ensure that item nIndex is displayed, scroll if necessary
+    void Scroll( _In_ int nDelta );    // Scroll by nDelta items (plus or minus)
+    void ShowItem( _In_ int nIndex );  // Ensure that item nIndex is displayed, scroll if necessary
 
 protected:
     // ARROWSTATE indicates the state of the arrow buttons.
@@ -947,60 +787,50 @@ struct DXUTListBoxItem
 class CDXUTListBox : public CDXUTControl
 {
 public:
-                    CDXUTListBox( CDXUTDialog* pDialog = NULL );
-    virtual         ~CDXUTListBox();
+    CDXUTListBox( _In_opt_ CDXUTDialog* pDialog = nullptr );
+    virtual ~CDXUTListBox();
 
-    virtual HRESULT OnInit()
+    virtual HRESULT OnInit() override
     {
         return m_pDialog->InitControl( &m_ScrollBar );
     }
-    virtual bool    CanHaveFocus()
+    virtual bool CanHaveFocus() override
     {
         return ( m_bVisible && m_bEnabled );
     }
-    virtual bool    HandleKeyboard( UINT uMsg, WPARAM wParam, LPARAM lParam );
-    virtual bool    HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lParam );
-    virtual bool    MsgProc( UINT uMsg, WPARAM wParam, LPARAM lParam );
+    virtual bool HandleKeyboard( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam )  override;
+    virtual bool HandleMouse( _In_ UINT uMsg, _In_ const POINT& pt, _In_ WPARAM wParam, _In_ LPARAM lParam )  override;
+    virtual bool MsgProc( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam )  override;
 
-    virtual void    Render( float fElapsedTime );
-    virtual void    UpdateRects();
+    virtual void Render( _In_ float fElapsedTime ) override;
+    virtual void UpdateRects() override;
 
-    DWORD           GetStyle() const
+    DWORD GetStyle() const { return m_dwStyle; }
+    size_t GetSize() const { return m_Items.size(); }
+    void SetStyle( _In_ DWORD dwStyle ) { m_dwStyle = dwStyle; }
+    int GetScrollBarWidth() const{ return m_nSBWidth; }
+    void SetScrollBarWidth( _In_ int nWidth )
     {
-        return m_dwStyle;
+        m_nSBWidth = nWidth;
+        UpdateRects();
     }
-    int             GetSize() const
+    void SetBorder( _In_ int nBorder, _In_ int nMargin )
     {
-        return m_Items.GetSize();
+        m_nBorder = nBorder;
+        m_nMargin = nMargin;
     }
-    void            SetStyle( DWORD dwStyle )
-    {
-        m_dwStyle = dwStyle;
-    }
-    int             GetScrollBarWidth() const
-    {
-        return m_nSBWidth;
-    }
-    void            SetScrollBarWidth( int nWidth )
-    {
-        m_nSBWidth = nWidth; UpdateRects();
-    }
-    void            SetBorder( int nBorder, int nMargin )
-    {
-        m_nBorder = nBorder; m_nMargin = nMargin;
-    }
-    HRESULT         AddItem( const WCHAR* wszText, void* pData );
-    HRESULT         InsertItem( int nIndex, const WCHAR* wszText, void* pData );
-    void            RemoveItem( int nIndex );
-    void            RemoveAllItems();
+    HRESULT AddItem( _In_z_ const WCHAR* wszText, _In_opt_ void* pData );
+    HRESULT InsertItem( _In_ int nIndex, _In_z_ const WCHAR* wszText, _In_opt_ void* pData );
+    void    RemoveItem( _In_ int nIndex );
+    void    RemoveAllItems();
 
-    DXUTListBoxItem* GetItem( int nIndex );
-    int             GetSelectedIndex( int nPreviousSelected = -1 );
-    DXUTListBoxItem* GetSelectedItem( int nPreviousSelected = -1 )
+    DXUTListBoxItem* GetItem( _In_ int nIndex ) const;
+    int              GetSelectedIndex( _In_ int nPreviousSelected = -1 ) const;
+    DXUTListBoxItem* GetSelectedItem( _In_ int nPreviousSelected = -1 ) const
     {
         return GetItem( GetSelectedIndex( nPreviousSelected ) );
     }
-    void            SelectItem( int nNewIndex );
+    void             SelectItem( _In_ int nNewIndex );
 
     enum STYLE
     {
@@ -1020,7 +850,7 @@ protected:
     int m_nSelStart;    // Index of the item where selection starts (for handling multi-selection)
     bool m_bDrag;       // Whether the user is dragging the mouse to select
 
-    CGrowableArray <DXUTListBoxItem*> m_Items;
+    std::vector<DXUTListBoxItem*> m_Items;
 };
 
 
@@ -1036,71 +866,60 @@ struct DXUTComboBoxItem
     bool bVisible;
 };
 
-
 class CDXUTComboBox : public CDXUTButton
 {
 public:
-                    CDXUTComboBox( CDXUTDialog* pDialog = NULL );
-    virtual         ~CDXUTComboBox();
+    CDXUTComboBox( _In_opt_ CDXUTDialog* pDialog = nullptr );
+    virtual ~CDXUTComboBox();
 
-    virtual void    SetTextColor( D3DCOLOR Color );
-    virtual HRESULT OnInit()
+    virtual void SetTextColor( _In_ DWORD Color ) override;
+    virtual HRESULT OnInit() override
     {
         return m_pDialog->InitControl( &m_ScrollBar );
     }
 
-    virtual bool    HandleKeyboard( UINT uMsg, WPARAM wParam, LPARAM lParam );
-    virtual bool    HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lParam );
-    virtual void    OnHotkey();
+    virtual bool HandleKeyboard( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual bool HandleMouse( _In_ UINT uMsg, _In_ const POINT& pt, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual void OnHotkey() override;
 
-    virtual bool    CanHaveFocus()
+    virtual bool CanHaveFocus() override
     {
         return ( m_bVisible && m_bEnabled );
     }
-    virtual void    OnFocusOut();
-    virtual void    Render( float fElapsedTime );
+    virtual void OnFocusOut() override;
+    virtual void Render( _In_ float fElapsedTime ) override;
 
-    virtual void    UpdateRects();
+    virtual void UpdateRects() override;
 
-    HRESULT         AddItem( const WCHAR* strText, void* pData );
-    void            RemoveAllItems();
-    void            RemoveItem( UINT index );
-    bool            ContainsItem( const WCHAR* strText, UINT iStart=0 );
-    int             FindItem( const WCHAR* strText, UINT iStart=0 );
-    void* GetItemData( const WCHAR* strText );
-    void* GetItemData( int nIndex );
-    void            SetDropHeight( UINT nHeight )
+    HRESULT AddItem( _In_z_ const WCHAR* strText, _In_opt_ void* pData );
+    void    RemoveAllItems();
+    void    RemoveItem( _In_ UINT index );
+    bool    ContainsItem( _In_z_ const WCHAR* strText, _In_ UINT iStart=0 );
+    int     FindItem( _In_z_ const WCHAR* strText, _In_ UINT iStart=0 ) const;
+    void*   GetItemData( _In_z_ const WCHAR* strText ) const;
+    void*   GetItemData( _In_ int nIndex ) const;
+    void    SetDropHeight( _In_ UINT nHeight )
     {
-        m_nDropHeight = nHeight; UpdateRects();
+        m_nDropHeight = nHeight;
+        UpdateRects();
     }
-    int             GetScrollBarWidth() const
+    int     GetScrollBarWidth() const { return m_nSBWidth; }
+    void    SetScrollBarWidth( _In_ int nWidth )
     {
-        return m_nSBWidth;
-    }
-    void            SetScrollBarWidth( int nWidth )
-    {
-        m_nSBWidth = nWidth; UpdateRects();
-    }
-
-    int             GetSelectedIndex() const
-    {
-        return m_iSelected;
-    }
-    void* GetSelectedData();
-    DXUTComboBoxItem* GetSelectedItem();
-
-    UINT            GetNumItems()
-    {
-        return m_Items.GetSize();
-    }
-    DXUTComboBoxItem* GetItem( UINT index )
-    {
-        return m_Items.GetAt( index );
+        m_nSBWidth = nWidth;
+        UpdateRects();
     }
 
-    HRESULT         SetSelectedByIndex( UINT index );
-    HRESULT         SetSelectedByText( const WCHAR* strText );
-    HRESULT         SetSelectedByData( void* pData );
+    int GetSelectedIndex() const { return m_iSelected; }
+    void* GetSelectedData() const;
+    DXUTComboBoxItem* GetSelectedItem() const;
+
+    UINT GetNumItems() { return static_cast<UINT>( m_Items.size() ); }
+    DXUTComboBoxItem* GetItem( _In_ UINT index ) { return m_Items[ index ]; }
+
+    HRESULT SetSelectedByIndex( _In_ UINT index );
+    HRESULT SetSelectedByText( _In_z_ const WCHAR* strText );
+    HRESULT SetSelectedByData( _In_ void* pData );
 
 protected:
     int m_iSelected;
@@ -1116,8 +935,7 @@ protected:
     RECT m_rcDropdown;
     RECT m_rcDropdownText;
 
-
-    CGrowableArray <DXUTComboBoxItem*> m_Items;
+    std::vector<DXUTComboBoxItem*> m_Items;
 };
 
 
@@ -1127,38 +945,33 @@ protected:
 class CDXUTSlider : public CDXUTControl
 {
 public:
-                    CDXUTSlider( CDXUTDialog* pDialog = NULL );
+    CDXUTSlider( _In_opt_ CDXUTDialog* pDialog = nullptr );
 
-    virtual BOOL    ContainsPoint( POINT pt );
-    virtual bool    CanHaveFocus()
+    virtual bool ContainsPoint( _In_ const POINT& pt ) override;
+    virtual bool CanHaveFocus() override
     {
         return ( m_bVisible && m_bEnabled );
     }
-    virtual bool    HandleKeyboard( UINT uMsg, WPARAM wParam, LPARAM lParam );
-    virtual bool    HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lParam );
+    virtual bool HandleKeyboard( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual bool HandleMouse( _In_ UINT uMsg, _In_ const POINT& pt, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
 
-    virtual void    UpdateRects();
+    virtual void UpdateRects() override;
 
-    virtual void    Render( float fElapsedTime );
+    virtual void Render( _In_ float fElapsedTime ) override;
 
-    void            SetValue( int nValue )
+    void SetValue( int nValue ) { SetValueInternal( nValue, false ); }
+    int GetValue() const { return m_nValue; }
+
+    void GetRange( _Out_ int& nMin, _Out_ int& nMax ) const
     {
-        SetValueInternal( nValue, false );
+        nMin = m_nMin;
+        nMax = m_nMax;
     }
-    int             GetValue() const
-    {
-        return m_nValue;
-    };
-
-    void            GetRange( int& nMin, int& nMax ) const
-    {
-        nMin = m_nMin; nMax = m_nMax;
-    }
-    void            SetRange( int nMin, int nMax );
+    void SetRange( _In_ int nMin, _In_ int nMax );
 
 protected:
-    void            SetValueInternal( int nValue, bool bFromInput );
-    int             ValueFromPos( int x );
+    void SetValueInternal( _In_ int nValue, _In_ bool bFromInput );
+    int ValueFromPos( _In_ int x );
 
     int m_nValue;
 
@@ -1180,53 +993,44 @@ protected:
 class CUniBuffer
 {
 public:
-                            CUniBuffer( int nInitialSize = 1 );
-                            ~CUniBuffer();
+    CUniBuffer( _In_ int nInitialSize = 1 );
+    ~CUniBuffer();
 
-    static void WINAPI      Initialize();
-    static void WINAPI      Uninitialize();
-
-    int                     GetBufferSize()
-    {
-        return m_nBufferSize;
-    }
-    bool                    SetBufferSize( int nSize );
-    int                     GetTextSize()
-    {
-        return lstrlenW( m_pwszBuffer );
-    }
-    const WCHAR* GetBuffer()
+    size_t GetBufferSize() const { return m_nBufferSize; }
+    bool SetBufferSize( _In_ int nSize );
+    int GetTextSize() const { return (int)wcslen( m_pwszBuffer ); }
+    const WCHAR* GetBuffer() const
     {
         return m_pwszBuffer;
     }
-    const WCHAR& operator[]( int n ) const
+    const WCHAR& operator[]( _In_ int n ) const
     {
         return m_pwszBuffer[n];
     }
-    WCHAR& operator[]( int n );
-    DXUTFontNode* GetFontNode()
-    {
-        return m_pFontNode;
-    }
-    void                    SetFontNode( DXUTFontNode* pFontNode )
-    {
-        m_pFontNode = pFontNode;
-    }
-    void                    Clear();
+    WCHAR& operator[]( _In_ int n );
+    DXUTFontNode* GetFontNode() const { return m_pFontNode; }
+    void SetFontNode( _In_opt_ DXUTFontNode* pFontNode ) { m_pFontNode = pFontNode; }
+    void Clear();
 
-    bool                    InsertChar( int nIndex, WCHAR wChar ); // Inserts the char at specified index. If nIndex == -1, insert to the end.
-    bool                    RemoveChar( int nIndex );  // Removes the char at specified index. If nIndex == -1, remove the last char.
-    bool                    InsertString( int nIndex, const WCHAR* pStr, int nCount = -1 );  // Inserts the first nCount characters of the string pStr at specified index.  If nCount == -1, the entire string is inserted. If nIndex == -1, insert to the end.
-    bool                    SetText( LPCWSTR wszText );
+    bool InsertChar( _In_ int nIndex, _In_ WCHAR wChar );
+        // Inserts the char at specified index. If nIndex == -1, insert to the end.
+
+    bool RemoveChar( _In_ int nIndex );
+        // Removes the char at specified index. If nIndex == -1, remove the last char.
+
+    bool InsertString( _In_ int nIndex, _In_z_ const WCHAR* pStr, _In_ int nCount = -1 );
+        // Inserts the first nCount characters of the string pStr at specified index.  If nCount == -1, the entire string is inserted. If nIndex == -1, insert to the end.
+
+    bool SetText( _In_z_ LPCWSTR wszText );
 
     // Uniscribe
-    HRESULT                 CPtoX( int nCP, BOOL bTrail, int* pX );
-    HRESULT                 XtoCP( int nX, int* pCP, int* pnTrail );
-    void                    GetPriorItemPos( int nCP, int* pPrior );
-    void                    GetNextItemPos( int nCP, int* pPrior );
+    bool CPtoX( _In_ int nCP, _In_ bool bTrail, _Out_ int* pX );
+    bool XtoCP( _In_ int nX, _Out_ int* pCP, _Out_ int* pnTrail );
+    void GetPriorItemPos( _In_ int nCP, _Out_ int* pPrior );
+    void GetNextItemPos( _In_ int nCP, _Out_ int* pPrior );
 
 private:
-    HRESULT                 Analyse();      // Uniscribe -- Analyse() analyses the string in the buffer
+    HRESULT Analyse();      // Uniscribe -- Analyse() analyses the string in the buffer
 
     WCHAR* m_pwszBuffer;    // Buffer to hold text
     int m_nBufferSize;   // Size of the buffer allocated, in characters
@@ -1235,57 +1039,8 @@ private:
     DXUTFontNode* m_pFontNode;          // Font node for the font that this buffer uses
     bool m_bAnalyseRequired;            // True if the string has changed since last analysis.
     SCRIPT_STRING_ANALYSIS m_Analysis;  // Analysis for the current string
-
-private:
-    // Empty implementation of the Uniscribe API
-    static HRESULT WINAPI   Dummy_ScriptApplyDigitSubstitution( const SCRIPT_DIGITSUBSTITUTE*, SCRIPT_CONTROL*,
-                                                                SCRIPT_STATE* )
-    {
-        return E_NOTIMPL;
-    }
-    static HRESULT WINAPI   Dummy_ScriptStringAnalyse( HDC, const void*, int, int, int, DWORD, int, SCRIPT_CONTROL*,
-                                                       SCRIPT_STATE*, const int*, SCRIPT_TABDEF*, const BYTE*,
-                                                       SCRIPT_STRING_ANALYSIS* )
-    {
-        return E_NOTIMPL;
-    }
-    static HRESULT WINAPI   Dummy_ScriptStringCPtoX( SCRIPT_STRING_ANALYSIS, int, BOOL, int* )
-    {
-        return E_NOTIMPL;
-    }
-    static HRESULT WINAPI   Dummy_ScriptStringXtoCP( SCRIPT_STRING_ANALYSIS, int, int*, int* )
-    {
-        return E_NOTIMPL;
-    }
-    static HRESULT WINAPI   Dummy_ScriptStringFree( SCRIPT_STRING_ANALYSIS* )
-    {
-        return E_NOTIMPL;
-    }
-    static const SCRIPT_LOGATTR* WINAPI Dummy_ScriptString_pLogAttr( SCRIPT_STRING_ANALYSIS )
-    {
-        return NULL;
-    }
-    static const int* WINAPI Dummy_ScriptString_pcOutChars( SCRIPT_STRING_ANALYSIS )
-    {
-        return NULL;
-    }
-
-    // Function pointers
-    static                  HRESULT( WINAPI* _ScriptApplyDigitSubstitution )( const SCRIPT_DIGITSUBSTITUTE*,
-                                                                              SCRIPT_CONTROL*, SCRIPT_STATE* );
-    static                  HRESULT( WINAPI* _ScriptStringAnalyse )( HDC, const void*, int, int, int, DWORD, int,
-                                                                     SCRIPT_CONTROL*, SCRIPT_STATE*, const int*,
-                                                                     SCRIPT_TABDEF*, const BYTE*,
-                                                                     SCRIPT_STRING_ANALYSIS* );
-    static                  HRESULT( WINAPI* _ScriptStringCPtoX )( SCRIPT_STRING_ANALYSIS, int, BOOL, int* );
-    static                  HRESULT( WINAPI* _ScriptStringXtoCP )( SCRIPT_STRING_ANALYSIS, int, int*, int* );
-    static                  HRESULT( WINAPI* _ScriptStringFree )( SCRIPT_STRING_ANALYSIS* );
-    static const SCRIPT_LOGATTR* ( WINAPI*_ScriptString_pLogAttr )( SCRIPT_STRING_ANALYSIS );
-    static const int* ( WINAPI*_ScriptString_pcOutChars )( SCRIPT_STRING_ANALYSIS );
-
-    static HINSTANCE s_hDll;  // Uniscribe DLL handle
-
 };
+
 
 //-----------------------------------------------------------------------------
 // EditBox control
@@ -1293,65 +1048,49 @@ private:
 class CDXUTEditBox : public CDXUTControl
 {
 public:
-                    CDXUTEditBox( CDXUTDialog* pDialog = NULL );
-    virtual         ~CDXUTEditBox();
+    CDXUTEditBox( _In_opt_ CDXUTDialog* pDialog = nullptr );
+    virtual ~CDXUTEditBox();
 
-    virtual bool    HandleKeyboard( UINT uMsg, WPARAM wParam, LPARAM lParam );
-    virtual bool    HandleMouse( UINT uMsg, POINT pt, WPARAM wParam, LPARAM lParam );
-    virtual bool    MsgProc( UINT uMsg, WPARAM wParam, LPARAM lParam );
-    virtual void    UpdateRects();
-    virtual bool    CanHaveFocus()
+    virtual bool HandleKeyboard( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual bool HandleMouse( _In_ UINT uMsg, _In_ const POINT& pt, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual bool MsgProc( _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam ) override;
+    virtual void UpdateRects() override;
+    virtual bool CanHaveFocus() override
     {
         return ( m_bVisible && m_bEnabled );
     }
-    virtual void    Render( float fElapsedTime );
-    virtual void    OnFocusIn();
+    virtual void Render( _In_ float fElapsedTime ) override;
+    virtual void OnFocusIn() override;
 
-    void            SetText( LPCWSTR wszText, bool bSelected = false );
-    LPCWSTR         GetText()
+    void    SetText( _In_z_ LPCWSTR wszText, _In_ bool bSelected = false );
+    LPCWSTR GetText() const { return m_Buffer.GetBuffer(); }
+    size_t  GetTextLength() const { return m_Buffer.GetTextSize(); }  // Returns text length in chars excluding nul.
+    HRESULT GetTextCopy(  _Out_writes_(bufferCount) LPWSTR strDest, _In_ UINT bufferCount ) const;
+    void    ClearText();
+
+    virtual void SetTextColor( _In_ DWORD Color ) override { m_TextColor = Color; }  // Text color
+    void SetSelectedTextColor( _In_ DWORD Color ) { m_SelTextColor = Color; }  // Selected text color
+    void SetSelectedBackColor( _In_ DWORD Color ) { m_SelBkColor = Color; }  // Selected background color
+    void SetCaretColor( _In_ DWORD Color ) { m_CaretColor = Color; }  // Caret color
+    void SetBorderWidth( _In_ int nBorder )
     {
-        return m_Buffer.GetBuffer();
-    }
-    int             GetTextLength()
-    {
-        return m_Buffer.GetTextSize();
-    }  // Returns text length in chars excluding NULL.
-    HRESULT         GetTextCopy(  __out_ecount(bufferCount) LPWSTR strDest, 
-                    UINT bufferCount );
-    void            ClearText();
-    virtual void    SetTextColor( D3DCOLOR Color )
-    {
-        m_TextColor = Color;
-    }  // Text color
-    void            SetSelectedTextColor( D3DCOLOR Color )
-    {
-        m_SelTextColor = Color;
-    }  // Selected text color
-    void            SetSelectedBackColor( D3DCOLOR Color )
-    {
-        m_SelBkColor = Color;
-    }  // Selected background color
-    void            SetCaretColor( D3DCOLOR Color )
-    {
-        m_CaretColor = Color;
-    }  // Caret color
-    void            SetBorderWidth( int nBorder )
-    {
-        m_nBorder = nBorder; UpdateRects();
+        m_nBorder = nBorder;
+        UpdateRects();
     }  // Border of the window
-    void            SetSpacing( int nSpacing )
+    void SetSpacing( _In_ int nSpacing )
     {
-        m_nSpacing = nSpacing; UpdateRects();
+        m_nSpacing = nSpacing;
+        UpdateRects();
     }
-    void            ParseFloatArray( float* pNumbers, int nCount );
-    void            SetTextFloatArray( const float* pNumbers, int nCount );
+    void ParseFloatArray( _In_reads_(nCount) float* pNumbers, _In_ int nCount );
+    void SetTextFloatArray( _In_reads_(nCount) const float* pNumbers, _In_ int nCount );
 
 protected:
-    void            PlaceCaret( int nCP );
-    void            DeleteSelectionText();
-    void            ResetCaretBlink();
-    void            CopyToClipboard();
-    void            PasteFromClipboard();
+    void PlaceCaret( _In_ int nCP );
+    void DeleteSelectionText();
+    void ResetCaretBlink();
+    void CopyToClipboard();
+    void PasteFromClipboard();
 
     CUniBuffer m_Buffer;     // Buffer to hold text
     int m_nBorder;      // Border of the window
@@ -1365,10 +1104,10 @@ protected:
     bool m_bInsertMode;  // If true, control is in insert mode. Else, overwrite mode.
     int m_nSelStart;    // Starting position of the selection. The caret marks the end.
     int m_nFirstVisible;// First visible character in the edit control
-    D3DCOLOR m_TextColor;    // Text color
-    D3DCOLOR m_SelTextColor; // Selected text color
-    D3DCOLOR m_SelBkColor;   // Selected background color
-    D3DCOLOR m_CaretColor;   // Caret color
+    DWORD m_TextColor;    // Text color
+    DWORD m_SelTextColor; // Selected text color
+    DWORD m_SelBkColor;   // Selected background color
+    DWORD m_CaretColor;   // Caret color
 
     // Mouse-specific
     bool m_bMouseDrag;       // True to indicate drag in progress
@@ -1378,6 +1117,9 @@ protected:
 };
 
 
-
-
-#endif // DXUT_GUI_H
+//-----------------------------------------------------------------------------
+void BeginText11();
+void DrawText11DXUT( _In_ ID3D11Device* pd3dDevice, _In_ ID3D11DeviceContext* pd3d11DeviceContext,
+                     _In_z_ LPCWSTR strText, _In_ const RECT& rcScreen, _In_ DirectX::XMFLOAT4 vFontColor,
+                     _In_ float fBBWidth, _In_ float fBBHeight, _In_ bool bCenter );
+void EndText11( _In_ ID3D11Device* pd3dDevice, _In_ ID3D11DeviceContext* pd3d11DeviceContext );

@@ -2,40 +2,39 @@
 // DXUTLockFreePipe.h
 //
 // See the "Lockless Programming Considerations for Xbox 360 and Microsoft Windows"
-// article in the DirectX SDK for more details.
+// article for more details.
 //
-// http://msdn2.microsoft.com/en-us/library/bb310595.aspx
+// http://msdn.microsoft.com/en-us/library/ee418650.aspx
 //
-// XNA Developer Connection
-// Copyright (C) Microsoft Corporation. All rights reserved.
+// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
+// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+// PARTICULAR PURPOSE.
+//
+// Copyright (c) Microsoft Corporation. All rights reserved.
+//
+// http://go.microsoft.com/fwlink/?LinkId=320437
 //--------------------------------------------------------------------------------------
 #pragma once
 
 #include <sal.h>
+#include <algorithm>
 
-#ifdef _XBOX_VER
-    // Prevent the CPU from rearranging loads
-    // and stores, sufficiently for read-acquire
-    // and write-release.
-    #define DXUTImportBarrier __lwsync
-    #define DXUTExportBarrier __lwsync
-#else
-    #pragma pack(push)
-    #pragma pack(8)
-    #include <windows.h>
-    #pragma pack (pop)
+#pragma pack(push)
+#pragma pack(8)
+#include <windows.h>
+#pragma pack (pop)
 
-    extern "C"
-        void _ReadWriteBarrier();
-    #pragma intrinsic(_ReadWriteBarrier)
+extern "C"
+    void _ReadWriteBarrier();
+#pragma intrinsic(_ReadWriteBarrier)
 
-    // Prevent the compiler from rearranging loads
-    // and stores, sufficiently for read-acquire
-    // and write-release. This is sufficient on
-    // x86 and x64.
-    #define DXUTImportBarrier _ReadWriteBarrier
-    #define DXUTExportBarrier _ReadWriteBarrier
-#endif
+// Prevent the compiler from rearranging loads
+// and stores, sufficiently for read-acquire
+// and write-release. This is sufficient on
+// x86 and x64.
+#define DXUTImportBarrier _ReadWriteBarrier
+#define DXUTExportBarrier _ReadWriteBarrier
 
 //
 // Pipe class designed for use by at most two threads: one reader, one writer.
@@ -63,7 +62,7 @@ public:
         return m_writeOffset - m_readOffset;
     }
 
-    bool __forceinline          Read( void* pvDest, unsigned long cbDest )
+    bool __forceinline          Read( _Out_writes_(cbDest) void* pvDest, _In_ unsigned long cbDest )
     {
         // Store the read and write offsets into local variables--this is
         // essentially a snapshot of their values so that they stay constant
@@ -118,7 +117,7 @@ public:
         // then the previous comparison would have failed since that would imply
         // that there were less than cbDest bytes available to read.
         //
-        unsigned long cbTailBytes = min( bytesLeft, c_cbBufferSize - actualReadOffset );
+        unsigned long cbTailBytes = std::min( bytesLeft, c_cbBufferSize - actualReadOffset );
         memcpy( pbDest, m_pbBuffer + actualReadOffset, cbTailBytes );
         bytesLeft -= cbTailBytes;
 
@@ -148,7 +147,7 @@ public:
         return true;
     }
 
-    bool __forceinline          Write( const void* pvSrc, unsigned long cbSrc )
+    bool __forceinline          Write( _In_reads_(cbSrc) const void* pvSrc, _In_ unsigned long cbSrc )
     {
         // Reading the read offset here has the same caveats as reading
         // the write offset had in the Read() function above. 
@@ -179,7 +178,7 @@ public:
 
         // See the explanation in the Read() function as to why we don't 
         // explicitly check against the read offset here.
-        unsigned long cbTailBytes = min( bytesLeft, c_cbBufferSize - actualWriteOffset );
+        unsigned long cbTailBytes = std::min( bytesLeft, c_cbBufferSize - actualWriteOffset );
         memcpy( m_pbBuffer + actualWriteOffset, pbSrc, cbTailBytes );
         bytesLeft -= cbTailBytes;
 
@@ -208,7 +207,7 @@ public:
 private:
     // Values derived from the buffer size template parameter
     //
-    const static BYTE c_cbBufferSizeLog2 = min( cbBufferSizeLog2, 31 );
+    const static BYTE c_cbBufferSizeLog2 = __min( cbBufferSizeLog2, 31 );
     const static DWORD c_cbBufferSize = ( 1 << c_cbBufferSizeLog2 );
     const static DWORD c_sizeMask = c_cbBufferSize - 1;
 

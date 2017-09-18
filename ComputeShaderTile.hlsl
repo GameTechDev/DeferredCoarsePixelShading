@@ -3,15 +3,15 @@
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or imlied.
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
-// limitations under the License.
+// limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef COMPUTE_SHADER_TILE_HLSL
@@ -210,41 +210,43 @@ void ComputeShaderTileCS(uint3 groupId          : SV_GroupID,
             }
         } else if (numLights > 0) {
             bool perSampleShading = mUI.forcePerPixel ? true : RequiresPerPixelShading(surfaceSamples);
-                float3 lit = float3(0.0f, 0.0f, 0.0f);
-                for (uint tileLightIndex = 0; tileLightIndex < numLights; ++tileLightIndex) {
-                    PointLight light = gLight[sTileLightIndices[tileLightIndex]];
-                    AccumulateBRDF(surfaceSamples[0], light, lit, mUI.faceNormals && !perSampleShading);
-                }
+            float3 lit = float3(0.0f, 0.0f, 0.0f);
+            for (uint tileLightIndex = 0; tileLightIndex < numLights; ++tileLightIndex) {
+                PointLight light = gLight[sTileLightIndices[tileLightIndex]];
+                AccumulateBRDF(surfaceSamples[0], light, lit, mUI.faceNormals && !perSampleShading);
+            }
 
-                // Write top left pixel's result
-                WriteSample(globalCoords, 0, (mUI.visualizePerSampleShading && !perSampleShading)? float4(0.f, 1.f, 0.f, 1.0f) : float4(lit, 1.0f));
+            // Write top left pixel's result
+            WriteSample(globalCoords, 0, (mUI.visualizePerSampleShading && !perSampleShading)? float4(0.f, 1.f, 0.f, 1.0f) : float4(lit, 1.0f));
                         
-                [branch] if (perSampleShading) {
-                    #if DEFER_PER_PIXEL
-                        // Create a list of coarse pixels that need per-pixel shading
-                        uint listIndex;
-                        InterlockedAdd(sNumPerPixelCoarsePixels, 1, listIndex);
-                        sPerPixelCoarsePixels[listIndex] = PackCoords(globalCoords);
-                    #else
-                        // Shade the other samples for this pixel
-                        for (uint pixel = 1; pixel < CPS_RATE * CPS_RATE; ++pixel) {
-                            float3 litSample = float3(0.0f, 0.0f, 0.0f);
-                            for (uint tileLightIndex = 0; tileLightIndex < numLights; ++tileLightIndex) {
-                                PointLight light = gLight[sTileLightIndices[tileLightIndex]];
-                                AccumulateBRDF(surfaceSamples[pixel], light, litSample);
-                            }                        
-                            WriteSample(globalCoords + uint2(pixel % 2, pixel / 2), 0, float4(litSample, 1.0f));
-                        }
-                    #endif
-                } else {
-                    // Otherwise per-coarse pixel shading, so splat the result to all the pixels
-                    [unroll] for (uint pixel = 1; pixel < CPS_RATE * CPS_RATE; ++pixel) {
-                        WriteSample(globalCoords + uint2(pixel % CPS_RATE, pixel / CPS_RATE), 0, mUI.visualizePerSampleShading ? float4(0.f, 1.f, 0.f, 1.0f) : float4(lit, 1.0f));
+            [branch] if (perSampleShading) {
+                #if DEFER_PER_PIXEL
+                    // Create a list of coarse pixels that need per-pixel shading
+                    uint listIndex;
+                    InterlockedAdd(sNumPerPixelCoarsePixels, 1, listIndex);
+                    sPerPixelCoarsePixels[listIndex] = PackCoords(globalCoords);
+                #else
+                    // Shade the other samples for this pixel
+                    for (uint pixel = 1; pixel < CPS_RATE * CPS_RATE; ++pixel) {
+                        float3 litSample = float3(0.0f, 0.0f, 0.0f);
+                        for (uint tileLightIndex = 0; tileLightIndex < numLights; ++tileLightIndex) {
+                            PointLight light = gLight[sTileLightIndices[tileLightIndex]];
+                            AccumulateBRDF(surfaceSamples[pixel], light, litSample);
+                        }                        
+                        WriteSample(globalCoords + uint2(pixel % 2, pixel / 2), 0, float4(litSample, 1.0f));
                     }
+                #endif
+            } else {
+                // Otherwise per-coarse pixel shading, so splat the result to all the pixels
+                [unroll] for (uint pixel = 1; pixel < CPS_RATE * CPS_RATE; ++pixel) {
+                    WriteSample(globalCoords + uint2(pixel % CPS_RATE, pixel / CPS_RATE), 0, mUI.visualizePerSampleShading ? float4(0.f, 1.f, 0.f, 1.0f) : float4(lit, 1.0f));
                 }
+            }
         } else {
             // Otherwise no lights affect here so clear all samples
-            [unroll] for (uint pixel = 1; pixel < CPS_RATE * CPS_RATE; ++pixel) {
+            // StephanieB5: set pixel's initial value is 0 otherwise the top left pixel is left uncleared and garbage values
+            // appear in unlit areas.
+            [unroll] for (uint pixel = 0; pixel < CPS_RATE * CPS_RATE; ++pixel) {
                 WriteSample(globalCoords + uint2( pixel % CPS_RATE, pixel / CPS_RATE), 0, float4(0.0f, 0.0f, 0.0f, 0.0f));
             }
         }

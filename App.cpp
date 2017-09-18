@@ -3,15 +3,18 @@
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or imlied.
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
-// limitations under the License.
+// limitations under the License.
+//
+// Modified by StephanieB5 to remove dependencies on DirectX SDK in 2017
+//
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "App.h"
@@ -23,17 +26,18 @@
 #include <algorithm>
 
 using std::tr1::shared_ptr;
+using namespace DirectX;
 
 // NOTE: Must match layout of shader constant buffers
 
 __declspec(align(16))
 struct PerFrameConstants
 {
-    D3DXMATRIX mCameraWorldViewProj;
-    D3DXMATRIX mCameraWorldView;
-    D3DXMATRIX mCameraViewProj;
-    D3DXMATRIX mCameraProj;
-    D3DXVECTOR4 mCameraNearFar;
+    XMFLOAT4X4 mCameraWorldViewProj;
+    XMFLOAT4X4 mCameraWorldView;
+    XMFLOAT4X4 mCameraViewProj;
+    XMFLOAT4X4 mCameraProj;
+    XMFLOAT4 mCameraNearFar;
 
     unsigned int mFramebufferDimensionsX;
     unsigned int mFramebufferDimensionsY;
@@ -125,7 +129,7 @@ App::App(ID3D11Device *d3dDevice, unsigned int activeLights, unsigned int msaaSa
         // shader interface, just recompile the vertex shader.
         UINT shaderFlags = D3D10_SHADER_ENABLE_STRICTNESS | D3D10_SHADER_PACK_MATRIX_ROW_MAJOR;
         ID3D10Blob *bytecode = 0;
-        HRESULT hr = D3DX11CompileFromFile(L"Rendering.hlsl", defines, 0, "GeometryVS", "vs_5_0", shaderFlags, 0, 0, &bytecode, 0, 0);
+        HRESULT hr = D3DCompileFromFile(L"Rendering.hlsl", defines, D3D_COMPILE_STANDARD_FILE_INCLUDE, "GeometryVS", "vs_5_0", shaderFlags, 0, &bytecode, 0);
         if (FAILED(hr)) {
             assert(false);      // It worked earlier...
         }
@@ -240,7 +244,8 @@ App::App(ID3D11Device *d3dDevice, unsigned int activeLights, unsigned int msaaSa
     }
 #endif // _PERF
 
-    InitializeLightParameters(d3dDevice);
+    // StephanieB5: removed unused parameter ID3D11Device* d3dDevice
+    InitializeLightParameters();
     SetActiveLights(d3dDevice, activeLights);
 }
 
@@ -395,7 +400,8 @@ void App::OnD3D11ResizedSwapChain(ID3D11Device* d3dDevice,
 //     mGBufferSRV.back() = mDepthBuffer->GetShaderResource();
 }
 
-void App::InitializeLightParameters(ID3D11Device* d3dDevice)
+// StephanieB5: removed unused parameter ID3D11Device* d3dDevice
+void App::InitializeLightParameters()
 {
     mPointLightParameters.resize(MAX_LIGHTS);
     mLightInitialTransform.resize(MAX_LIGHTS);
@@ -406,7 +412,7 @@ void App::InitializeLightParameters(ID3D11Device* d3dDevice)
 
     std::tr1::uniform_real<float> radiusNormDist(0.0f, 1.0f);
     const float maxRadius = 100.0f;
-    std::tr1::uniform_real<float> angleDist(0.0f, 2.0f * D3DX_PI); 
+    std::tr1::uniform_real<float> angleDist(0.0f, 2.0f * XM_PI); 
     std::tr1::uniform_real<float> heightDist(0.0f, 20.0f);
     std::tr1::uniform_real<float> animationSpeedDist(2.0f, 20.0f);
     std::tr1::uniform_int<int> animationDirection(0, 1);
@@ -426,7 +432,8 @@ void App::InitializeLightParameters(ID3D11Device* d3dDevice)
         init.animationSpeed = (animationDirection(rng) * 2 - 1) * animationSpeedDist(rng) / init.radius;
         
         // HSL->RGB, vary light hue
-        params.color = intensityDist(rng) * HueToRGB(hueDist(rng));
+        XMVECTOR color = intensityDist(rng) * HueToRGB(hueDist(rng));
+        XMStoreFloat3(&params.color, color);
         params.attenuationEnd = attenuationDist(rng);
         params.attenuationBegin = attenuationStartFactor * params.attenuationEnd;
     }
@@ -453,7 +460,7 @@ void App::Move(float elapsedTime)
     for (unsigned int i = 0; i < mActiveLights; ++i) {
         const PointLightInitTransform& initTransform = mLightInitialTransform[i];
         float angle = initTransform.angle + mTotalTime * initTransform.animationSpeed;
-        mPointLightPositionWorld[i] = D3DXVECTOR3(
+        mPointLightPositionWorld[i] = XMFLOAT3(
             initTransform.radius * std::cos(angle),
             initTransform.height,
             initTransform.radius * std::sin(angle));
@@ -466,20 +473,19 @@ void App::Render(ID3D11DeviceContext* d3dDeviceContext,
                  CDXUTSDKMesh& mesh_opaque,
                  CDXUTSDKMesh& mesh_alpha,
                  ID3D11ShaderResourceView* skybox,
-                 const D3DXMATRIXA16& worldMatrix,
+                 const CXMMATRIX worldMatrix,
                  const CFirstPersonCamera* viewerCamera,
                  const D3D11_VIEWPORT* viewport,
                  const UIConstants* ui)
 {
-    D3DXMATRIXA16 cameraProj = *viewerCamera->GetProjMatrix();
-    D3DXMATRIXA16 cameraView = *viewerCamera->GetViewMatrix();
+    XMMATRIX cameraProj = viewerCamera->GetProjMatrix();
+    XMMATRIX cameraView = viewerCamera->GetViewMatrix();
     
-    D3DXMATRIXA16 cameraViewInv;
-    D3DXMatrixInverse(&cameraViewInv, 0, &cameraView);
+    XMMATRIX cameraViewInv = XMMatrixInverse(nullptr, cameraView);
         
     // Compute composite matrices
-    D3DXMATRIXA16 cameraViewProj = cameraView * cameraProj;
-    D3DXMATRIXA16 cameraWorldViewProj = worldMatrix * cameraViewProj;
+    XMMATRIX cameraViewProj = cameraView * cameraProj;
+    XMMATRIX cameraWorldViewProj = worldMatrix * cameraViewProj;
 
     // Fill in frame constants
     {
@@ -487,12 +493,12 @@ void App::Render(ID3D11DeviceContext* d3dDeviceContext,
         d3dDeviceContext->Map(mPerFrameConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
         PerFrameConstants* constants = static_cast<PerFrameConstants *>(mappedResource.pData);
 
-        constants->mCameraWorldViewProj = cameraWorldViewProj;
-        constants->mCameraWorldView = worldMatrix * cameraView;
-        constants->mCameraViewProj = cameraViewProj;
-        constants->mCameraProj = cameraProj;
+        XMStoreFloat4x4(&constants->mCameraWorldViewProj, cameraWorldViewProj);
+        XMStoreFloat4x4(&constants->mCameraWorldView, worldMatrix * cameraView);
+        XMStoreFloat4x4(&constants->mCameraViewProj, cameraViewProj);
+        XMStoreFloat4x4(&constants->mCameraProj, cameraProj);
         // NOTE: Complementary Z => swap near/far back
-        constants->mCameraNearFar = D3DXVECTOR4(viewerCamera->GetFarClip(), viewerCamera->GetNearClip(), 0.0f, 0.0f);
+        constants->mCameraNearFar = XMFLOAT4(viewerCamera->GetFarClip(), viewerCamera->GetNearClip(), 0.0f, 0.0f);
 
         constants->mFramebufferDimensionsX = mGBufferWidth;
         constants->mFramebufferDimensionsY = mGBufferHeight;
@@ -516,12 +522,14 @@ void App::Render(ID3D11DeviceContext* d3dDeviceContext,
     ID3D11ShaderResourceView *lightBufferSRV = SetupLights(d3dDeviceContext, cameraView);
 
     // Forward rendering takes a different path here
+    // StephanieB5 removed unnecessary parameters from RenderForward and RenderGBuffer
+    // The parameters were CFirstPersonCamera* viewerCamera and UIConstants* ui
     if (ui->lightCullTechnique == CULL_FORWARD_NONE) {
-        RenderForward(d3dDeviceContext, mesh_opaque, mesh_alpha, lightBufferSRV, viewerCamera, viewport, ui, false);
+        RenderForward(d3dDeviceContext, mesh_opaque, mesh_alpha, lightBufferSRV, viewport, false);
     } else if (ui->lightCullTechnique == CULL_FORWARD_PREZ_NONE) {
-        RenderForward(d3dDeviceContext, mesh_opaque, mesh_alpha, lightBufferSRV, viewerCamera, viewport, ui, true);
+        RenderForward(d3dDeviceContext, mesh_opaque, mesh_alpha, lightBufferSRV, viewport, true);
     } else {
-        RenderGBuffer(d3dDeviceContext, mesh_opaque, mesh_alpha, viewerCamera, viewport, ui);
+        RenderGBuffer(d3dDeviceContext, mesh_opaque, mesh_alpha, viewport);
         ComputeLighting(d3dDeviceContext, lightBufferSRV, viewport, ui);
     }
 
@@ -539,11 +547,11 @@ void App::Render(ID3D11DeviceContext* d3dDeviceContext,
 
 
 ID3D11ShaderResourceView * App::SetupLights(ID3D11DeviceContext* d3dDeviceContext,
-                                            const D3DXMATRIXA16& cameraView)
+                                            const CXMMATRIX cameraView)
 {
     // Transform light world positions into view space and store in our parameters array
-    D3DXVec3TransformCoordArray(&mPointLightParameters[0].positionView, sizeof(PointLight),
-        &mPointLightPositionWorld[0], sizeof(D3DXVECTOR3), &cameraView, mActiveLights);
+    XMVector3TransformCoordStream(&mPointLightParameters[0].positionView, sizeof(PointLight),
+        &mPointLightPositionWorld[0], sizeof(XMFLOAT3), mActiveLights, cameraView);
     
     // Copy light list into shader buffer
     {
@@ -558,13 +566,12 @@ ID3D11ShaderResourceView * App::SetupLights(ID3D11DeviceContext* d3dDeviceContex
 }
 
 
+// StephanieB5: removed unused parameters CFirstPersonCamera* viewerCamera & UIConstants* ui
 ID3D11ShaderResourceView * App::RenderForward(ID3D11DeviceContext* d3dDeviceContext,
                                               CDXUTSDKMesh& mesh_opaque,
                                               CDXUTSDKMesh& mesh_alpha,
                                               ID3D11ShaderResourceView *lightBufferSRV,
-                                              const CFirstPersonCamera* viewerCamera,
                                               const D3D11_VIEWPORT* viewport,
-                                              const UIConstants* ui,
                                               bool doPreZ)
 {
     // Clear lit and depth buffer
@@ -634,13 +641,11 @@ ID3D11ShaderResourceView * App::RenderForward(ID3D11DeviceContext* d3dDeviceCont
     return mLitBufferPS->GetShaderResource();
 }
 
-
+// StephanieB5: removed unused parameters CFirstPersonCamera* viewerCamera & UIConstants* ui
 void App::RenderGBuffer(ID3D11DeviceContext* d3dDeviceContext,
                         CDXUTSDKMesh& mesh_opaque,
                         CDXUTSDKMesh& mesh_alpha,
-                        const CFirstPersonCamera* viewerCamera,
-                        const D3D11_VIEWPORT* viewport,
-                        const UIConstants* ui)
+                        const D3D11_VIEWPORT* viewport)
 {
 #ifdef _PERF
     d3dDeviceContext->Begin(m_pTimers[TIMER_GBUFFER_GEN][T_VALID]);

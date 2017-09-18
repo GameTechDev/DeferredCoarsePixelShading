@@ -3,13 +3,22 @@
 //
 // Shortcut macros and functions for using DX objects
 //
-// Copyright (c) Microsoft Corporation. All rights reserved
+// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
+// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+// PARTICULAR PURPOSE.
+//
+// Copyright (c) Microsoft Corporation. All rights reserved.
+//
+// http://go.microsoft.com/fwlink/?LinkId=320437
 //--------------------------------------------------------------------------------------
 #include "dxut.h"
 #include <xinput.h>
+
+#include "ScreenGrab.h"
+
+
 #define DXUT_GAMEPAD_TRIGGER_THRESHOLD      30
-#undef min // use __min instead
-#undef max // use __max instead
 
 CDXUTTimer* WINAPI DXUTGetGlobalTimer()
 {
@@ -85,7 +94,7 @@ void CDXUTTimer::Advance()
 
 
 //--------------------------------------------------------------------------------------
-double CDXUTTimer::GetAbsoluteTime()
+double CDXUTTimer::GetAbsoluteTime() const
 {
     LARGE_INTEGER qwTime = { 0 };
     QueryPerformanceCounter( &qwTime );
@@ -97,7 +106,7 @@ double CDXUTTimer::GetAbsoluteTime()
 
 
 //--------------------------------------------------------------------------------------
-double CDXUTTimer::GetTime()
+double CDXUTTimer::GetTime() const
 {
     LARGE_INTEGER qwTime = GetAdjustedCurrentTime();
 
@@ -108,6 +117,7 @@ double CDXUTTimer::GetTime()
 
 
 //--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 void CDXUTTimer::GetTimeValues( double* pfTime, double* pfAbsoluteTime, float* pfElapsedTime )
 {
     assert( pfTime && pfAbsoluteTime && pfElapsedTime );
@@ -152,7 +162,7 @@ float CDXUTTimer::GetElapsedTime()
 //--------------------------------------------------------------------------------------
 // If stopped, returns time when stopped otherwise returns current time
 //--------------------------------------------------------------------------------------
-LARGE_INTEGER CDXUTTimer::GetAdjustedCurrentTime()
+LARGE_INTEGER CDXUTTimer::GetAdjustedCurrentTime() const
 {
     LARGE_INTEGER qwTime;
     if( m_llStopTime != 0 )
@@ -160,12 +170,6 @@ LARGE_INTEGER CDXUTTimer::GetAdjustedCurrentTime()
     else
         QueryPerformanceCounter( &qwTime );
     return qwTime;
-}
-
-//--------------------------------------------------------------------------------------
-bool CDXUTTimer::IsStopped()
-{
-    return m_bTimerStopped;
 }
 
 //--------------------------------------------------------------------------------------
@@ -202,330 +206,137 @@ void CDXUTTimer::LimitThreadAffinityToCurrentProc()
 
 
 //--------------------------------------------------------------------------------------
-// Returns the string for the given D3DFORMAT.
-//--------------------------------------------------------------------------------------
-LPCWSTR WINAPI DXUTD3DFormatToString( D3DFORMAT format, bool bWithPrefix )
-{
-    WCHAR* pstr = NULL;
-    switch( format )
-    {
-        case D3DFMT_UNKNOWN:
-            pstr = L"D3DFMT_UNKNOWN"; break;
-        case D3DFMT_R8G8B8:
-            pstr = L"D3DFMT_R8G8B8"; break;
-        case D3DFMT_A8R8G8B8:
-            pstr = L"D3DFMT_A8R8G8B8"; break;
-        case D3DFMT_X8R8G8B8:
-            pstr = L"D3DFMT_X8R8G8B8"; break;
-        case D3DFMT_R5G6B5:
-            pstr = L"D3DFMT_R5G6B5"; break;
-        case D3DFMT_X1R5G5B5:
-            pstr = L"D3DFMT_X1R5G5B5"; break;
-        case D3DFMT_A1R5G5B5:
-            pstr = L"D3DFMT_A1R5G5B5"; break;
-        case D3DFMT_A4R4G4B4:
-            pstr = L"D3DFMT_A4R4G4B4"; break;
-        case D3DFMT_R3G3B2:
-            pstr = L"D3DFMT_R3G3B2"; break;
-        case D3DFMT_A8:
-            pstr = L"D3DFMT_A8"; break;
-        case D3DFMT_A8R3G3B2:
-            pstr = L"D3DFMT_A8R3G3B2"; break;
-        case D3DFMT_X4R4G4B4:
-            pstr = L"D3DFMT_X4R4G4B4"; break;
-        case D3DFMT_A2B10G10R10:
-            pstr = L"D3DFMT_A2B10G10R10"; break;
-        case D3DFMT_A8B8G8R8:
-            pstr = L"D3DFMT_A8B8G8R8"; break;
-        case D3DFMT_X8B8G8R8:
-            pstr = L"D3DFMT_X8B8G8R8"; break;
-        case D3DFMT_G16R16:
-            pstr = L"D3DFMT_G16R16"; break;
-        case D3DFMT_A2R10G10B10:
-            pstr = L"D3DFMT_A2R10G10B10"; break;
-        case D3DFMT_A16B16G16R16:
-            pstr = L"D3DFMT_A16B16G16R16"; break;
-        case D3DFMT_A8P8:
-            pstr = L"D3DFMT_A8P8"; break;
-        case D3DFMT_P8:
-            pstr = L"D3DFMT_P8"; break;
-        case D3DFMT_L8:
-            pstr = L"D3DFMT_L8"; break;
-        case D3DFMT_A8L8:
-            pstr = L"D3DFMT_A8L8"; break;
-        case D3DFMT_A4L4:
-            pstr = L"D3DFMT_A4L4"; break;
-        case D3DFMT_V8U8:
-            pstr = L"D3DFMT_V8U8"; break;
-        case D3DFMT_L6V5U5:
-            pstr = L"D3DFMT_L6V5U5"; break;
-        case D3DFMT_X8L8V8U8:
-            pstr = L"D3DFMT_X8L8V8U8"; break;
-        case D3DFMT_Q8W8V8U8:
-            pstr = L"D3DFMT_Q8W8V8U8"; break;
-        case D3DFMT_V16U16:
-            pstr = L"D3DFMT_V16U16"; break;
-        case D3DFMT_A2W10V10U10:
-            pstr = L"D3DFMT_A2W10V10U10"; break;
-        case D3DFMT_UYVY:
-            pstr = L"D3DFMT_UYVY"; break;
-        case D3DFMT_YUY2:
-            pstr = L"D3DFMT_YUY2"; break;
-        case D3DFMT_DXT1:
-            pstr = L"D3DFMT_DXT1"; break;
-        case D3DFMT_DXT2:
-            pstr = L"D3DFMT_DXT2"; break;
-        case D3DFMT_DXT3:
-            pstr = L"D3DFMT_DXT3"; break;
-        case D3DFMT_DXT4:
-            pstr = L"D3DFMT_DXT4"; break;
-        case D3DFMT_DXT5:
-            pstr = L"D3DFMT_DXT5"; break;
-        case D3DFMT_D16_LOCKABLE:
-            pstr = L"D3DFMT_D16_LOCKABLE"; break;
-        case D3DFMT_D32:
-            pstr = L"D3DFMT_D32"; break;
-        case D3DFMT_D15S1:
-            pstr = L"D3DFMT_D15S1"; break;
-        case D3DFMT_D24S8:
-            pstr = L"D3DFMT_D24S8"; break;
-        case D3DFMT_D24X8:
-            pstr = L"D3DFMT_D24X8"; break;
-        case D3DFMT_D24X4S4:
-            pstr = L"D3DFMT_D24X4S4"; break;
-        case D3DFMT_D16:
-            pstr = L"D3DFMT_D16"; break;
-        case D3DFMT_L16:
-            pstr = L"D3DFMT_L16"; break;
-        case D3DFMT_VERTEXDATA:
-            pstr = L"D3DFMT_VERTEXDATA"; break;
-        case D3DFMT_INDEX16:
-            pstr = L"D3DFMT_INDEX16"; break;
-        case D3DFMT_INDEX32:
-            pstr = L"D3DFMT_INDEX32"; break;
-        case D3DFMT_Q16W16V16U16:
-            pstr = L"D3DFMT_Q16W16V16U16"; break;
-        case D3DFMT_MULTI2_ARGB8:
-            pstr = L"D3DFMT_MULTI2_ARGB8"; break;
-        case D3DFMT_R16F:
-            pstr = L"D3DFMT_R16F"; break;
-        case D3DFMT_G16R16F:
-            pstr = L"D3DFMT_G16R16F"; break;
-        case D3DFMT_A16B16G16R16F:
-            pstr = L"D3DFMT_A16B16G16R16F"; break;
-        case D3DFMT_R32F:
-            pstr = L"D3DFMT_R32F"; break;
-        case D3DFMT_G32R32F:
-            pstr = L"D3DFMT_G32R32F"; break;
-        case D3DFMT_A32B32G32R32F:
-            pstr = L"D3DFMT_A32B32G32R32F"; break;
-        case D3DFMT_CxV8U8:
-            pstr = L"D3DFMT_CxV8U8"; break;
-        default:
-            pstr = L"Unknown format"; break;
-    }
-    if( bWithPrefix || wcsstr( pstr, L"D3DFMT_" ) == NULL )
-        return pstr;
-    else
-        return pstr + lstrlen( L"D3DFMT_" );
-}
-
-
-//--------------------------------------------------------------------------------------
 // Returns the string for the given DXGI_FORMAT.
 //--------------------------------------------------------------------------------------
+#define DXUTDXGIFMTSTR( a ) case a: pstr = L#a; break;
+
+_Use_decl_annotations_
 LPCWSTR WINAPI DXUTDXGIFormatToString( DXGI_FORMAT format, bool bWithPrefix )
 {
-    WCHAR* pstr = NULL;
+    const WCHAR* pstr = nullptr;
     switch( format )
     {
-        case DXGI_FORMAT_R32G32B32A32_TYPELESS:
-            pstr = L"DXGI_FORMAT_R32G32B32A32_TYPELESS"; break;
-        case DXGI_FORMAT_R32G32B32A32_FLOAT:
-            pstr = L"DXGI_FORMAT_R32G32B32A32_FLOAT"; break;
-        case DXGI_FORMAT_R32G32B32A32_UINT:
-            pstr = L"DXGI_FORMAT_R32G32B32A32_UINT"; break;
-        case DXGI_FORMAT_R32G32B32A32_SINT:
-            pstr = L"DXGI_FORMAT_R32G32B32A32_SINT"; break;
-        case DXGI_FORMAT_R32G32B32_TYPELESS:
-            pstr = L"DXGI_FORMAT_R32G32B32_TYPELESS"; break;
-        case DXGI_FORMAT_R32G32B32_FLOAT:
-            pstr = L"DXGI_FORMAT_R32G32B32_FLOAT"; break;
-        case DXGI_FORMAT_R32G32B32_UINT:
-            pstr = L"DXGI_FORMAT_R32G32B32_UINT"; break;
-        case DXGI_FORMAT_R32G32B32_SINT:
-            pstr = L"DXGI_FORMAT_R32G32B32_SINT"; break;
-        case DXGI_FORMAT_R16G16B16A16_TYPELESS:
-            pstr = L"DXGI_FORMAT_R16G16B16A16_TYPELESS"; break;
-        case DXGI_FORMAT_R16G16B16A16_FLOAT:
-            pstr = L"DXGI_FORMAT_R16G16B16A16_FLOAT"; break;
-        case DXGI_FORMAT_R16G16B16A16_UNORM:
-            pstr = L"DXGI_FORMAT_R16G16B16A16_UNORM"; break;
-        case DXGI_FORMAT_R16G16B16A16_UINT:
-            pstr = L"DXGI_FORMAT_R16G16B16A16_UINT"; break;
-        case DXGI_FORMAT_R16G16B16A16_SNORM:
-            pstr = L"DXGI_FORMAT_R16G16B16A16_SNORM"; break;
-        case DXGI_FORMAT_R16G16B16A16_SINT:
-            pstr = L"DXGI_FORMAT_R16G16B16A16_SINT"; break;
-        case DXGI_FORMAT_R32G32_TYPELESS:
-            pstr = L"DXGI_FORMAT_R32G32_TYPELESS"; break;
-        case DXGI_FORMAT_R32G32_FLOAT:
-            pstr = L"DXGI_FORMAT_R32G32_FLOAT"; break;
-        case DXGI_FORMAT_R32G32_UINT:
-            pstr = L"DXGI_FORMAT_R32G32_UINT"; break;
-        case DXGI_FORMAT_R32G32_SINT:
-            pstr = L"DXGI_FORMAT_R32G32_SINT"; break;
-        case DXGI_FORMAT_R32G8X24_TYPELESS:
-            pstr = L"DXGI_FORMAT_R32G8X24_TYPELESS"; break;
-        case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
-            pstr = L"DXGI_FORMAT_D32_FLOAT_S8X24_UINT"; break;
-        case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
-            pstr = L"DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS"; break;
-        case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
-            pstr = L"DXGI_FORMAT_X32_TYPELESS_G8X24_UINT"; break;
-        case DXGI_FORMAT_R10G10B10A2_TYPELESS:
-            pstr = L"DXGI_FORMAT_R10G10B10A2_TYPELESS"; break;
-        case DXGI_FORMAT_R10G10B10A2_UNORM:
-            pstr = L"DXGI_FORMAT_R10G10B10A2_UNORM"; break;
-        case DXGI_FORMAT_R10G10B10A2_UINT:
-            pstr = L"DXGI_FORMAT_R10G10B10A2_UINT"; break;
-        case DXGI_FORMAT_R11G11B10_FLOAT:
-            pstr = L"DXGI_FORMAT_R11G11B10_FLOAT"; break;
-        case DXGI_FORMAT_R8G8B8A8_TYPELESS:
-            pstr = L"DXGI_FORMAT_R8G8B8A8_TYPELESS"; break;
-        case DXGI_FORMAT_R8G8B8A8_UNORM:
-            pstr = L"DXGI_FORMAT_R8G8B8A8_UNORM"; break;
-        case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
-            pstr = L"DXGI_FORMAT_R8G8B8A8_UNORM_SRGB"; break;
-        case DXGI_FORMAT_R8G8B8A8_UINT:
-            pstr = L"DXGI_FORMAT_R8G8B8A8_UINT"; break;
-        case DXGI_FORMAT_R8G8B8A8_SNORM:
-            pstr = L"DXGI_FORMAT_R8G8B8A8_SNORM"; break;
-        case DXGI_FORMAT_R8G8B8A8_SINT:
-            pstr = L"DXGI_FORMAT_R8G8B8A8_SINT"; break;
-        case DXGI_FORMAT_R16G16_TYPELESS:
-            pstr = L"DXGI_FORMAT_R16G16_TYPELESS"; break;
-        case DXGI_FORMAT_R16G16_FLOAT:
-            pstr = L"DXGI_FORMAT_R16G16_FLOAT"; break;
-        case DXGI_FORMAT_R16G16_UNORM:
-            pstr = L"DXGI_FORMAT_R16G16_UNORM"; break;
-        case DXGI_FORMAT_R16G16_UINT:
-            pstr = L"DXGI_FORMAT_R16G16_UINT"; break;
-        case DXGI_FORMAT_R16G16_SNORM:
-            pstr = L"DXGI_FORMAT_R16G16_SNORM"; break;
-        case DXGI_FORMAT_R16G16_SINT:
-            pstr = L"DXGI_FORMAT_R16G16_SINT"; break;
-        case DXGI_FORMAT_R32_TYPELESS:
-            pstr = L"DXGI_FORMAT_R32_TYPELESS"; break;
-        case DXGI_FORMAT_D32_FLOAT:
-            pstr = L"DXGI_FORMAT_D32_FLOAT"; break;
-        case DXGI_FORMAT_R32_FLOAT:
-            pstr = L"DXGI_FORMAT_R32_FLOAT"; break;
-        case DXGI_FORMAT_R32_UINT:
-            pstr = L"DXGI_FORMAT_R32_UINT"; break;
-        case DXGI_FORMAT_R32_SINT:
-            pstr = L"DXGI_FORMAT_R32_SINT"; break;
-        case DXGI_FORMAT_R24G8_TYPELESS:
-            pstr = L"DXGI_FORMAT_R24G8_TYPELESS"; break;
-        case DXGI_FORMAT_D24_UNORM_S8_UINT:
-            pstr = L"DXGI_FORMAT_D24_UNORM_S8_UINT"; break;
-        case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
-            pstr = L"DXGI_FORMAT_R24_UNORM_X8_TYPELESS"; break;
-        case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
-            pstr = L"DXGI_FORMAT_X24_TYPELESS_G8_UINT"; break;
-        case DXGI_FORMAT_R8G8_TYPELESS:
-            pstr = L"DXGI_FORMAT_R8G8_TYPELESS"; break;
-        case DXGI_FORMAT_R8G8_UNORM:
-            pstr = L"DXGI_FORMAT_R8G8_UNORM"; break;
-        case DXGI_FORMAT_R8G8_UINT:
-            pstr = L"DXGI_FORMAT_R8G8_UINT"; break;
-        case DXGI_FORMAT_R8G8_SNORM:
-            pstr = L"DXGI_FORMAT_R8G8_SNORM"; break;
-        case DXGI_FORMAT_R8G8_SINT:
-            pstr = L"DXGI_FORMAT_R8G8_SINT"; break;
-        case DXGI_FORMAT_R16_TYPELESS:
-            pstr = L"DXGI_FORMAT_R16_TYPELESS"; break;
-        case DXGI_FORMAT_R16_FLOAT:
-            pstr = L"DXGI_FORMAT_R16_FLOAT"; break;
-        case DXGI_FORMAT_D16_UNORM:
-            pstr = L"DXGI_FORMAT_D16_UNORM"; break;
-        case DXGI_FORMAT_R16_UNORM:
-            pstr = L"DXGI_FORMAT_R16_UNORM"; break;
-        case DXGI_FORMAT_R16_UINT:
-            pstr = L"DXGI_FORMAT_R16_UINT"; break;
-        case DXGI_FORMAT_R16_SNORM:
-            pstr = L"DXGI_FORMAT_R16_SNORM"; break;
-        case DXGI_FORMAT_R16_SINT:
-            pstr = L"DXGI_FORMAT_R16_SINT"; break;
-        case DXGI_FORMAT_R8_TYPELESS:
-            pstr = L"DXGI_FORMAT_R8_TYPELESS"; break;
-        case DXGI_FORMAT_R8_UNORM:
-            pstr = L"DXGI_FORMAT_R8_UNORM"; break;
-        case DXGI_FORMAT_R8_UINT:
-            pstr = L"DXGI_FORMAT_R8_UINT"; break;
-        case DXGI_FORMAT_R8_SNORM:
-            pstr = L"DXGI_FORMAT_R8_SNORM"; break;
-        case DXGI_FORMAT_R8_SINT:
-            pstr = L"DXGI_FORMAT_R8_SINT"; break;
-        case DXGI_FORMAT_A8_UNORM:
-            pstr = L"DXGI_FORMAT_A8_UNORM"; break;
-        case DXGI_FORMAT_R1_UNORM:
-            pstr = L"DXGI_FORMAT_R1_UNORM"; break;
-        case DXGI_FORMAT_R9G9B9E5_SHAREDEXP:
-            pstr = L"DXGI_FORMAT_R9G9B9E5_SHAREDEXP"; break;
-        case DXGI_FORMAT_R8G8_B8G8_UNORM:
-            pstr = L"DXGI_FORMAT_R8G8_B8G8_UNORM"; break;
-        case DXGI_FORMAT_G8R8_G8B8_UNORM:
-            pstr = L"DXGI_FORMAT_G8R8_G8B8_UNORM"; break;
-        case DXGI_FORMAT_BC1_TYPELESS:
-            pstr = L"DXGI_FORMAT_BC1_TYPELESS"; break;
-        case DXGI_FORMAT_BC1_UNORM:
-            pstr = L"DXGI_FORMAT_BC1_UNORM"; break;
-        case DXGI_FORMAT_BC1_UNORM_SRGB:
-            pstr = L"DXGI_FORMAT_BC1_UNORM_SRGB"; break;
-        case DXGI_FORMAT_BC2_TYPELESS:
-            pstr = L"DXGI_FORMAT_BC2_TYPELESS"; break;
-        case DXGI_FORMAT_BC2_UNORM:
-            pstr = L"DXGI_FORMAT_BC2_UNORM"; break;
-        case DXGI_FORMAT_BC2_UNORM_SRGB:
-            pstr = L"DXGI_FORMAT_BC2_UNORM_SRGB"; break;
-        case DXGI_FORMAT_BC3_TYPELESS:
-            pstr = L"DXGI_FORMAT_BC3_TYPELESS"; break;
-        case DXGI_FORMAT_BC3_UNORM:
-            pstr = L"DXGI_FORMAT_BC3_UNORM"; break;
-        case DXGI_FORMAT_BC3_UNORM_SRGB:
-            pstr = L"DXGI_FORMAT_BC3_UNORM_SRGB"; break;
-        case DXGI_FORMAT_BC4_TYPELESS:
-            pstr = L"DXGI_FORMAT_BC4_TYPELESS"; break;
-        case DXGI_FORMAT_BC4_UNORM:
-            pstr = L"DXGI_FORMAT_BC4_UNORM"; break;
-        case DXGI_FORMAT_BC4_SNORM:
-            pstr = L"DXGI_FORMAT_BC4_SNORM"; break;
-        case DXGI_FORMAT_BC5_TYPELESS:
-            pstr = L"DXGI_FORMAT_BC5_TYPELESS"; break;
-        case DXGI_FORMAT_BC5_UNORM:
-            pstr = L"DXGI_FORMAT_BC5_UNORM"; break;
-        case DXGI_FORMAT_BC5_SNORM:
-            pstr = L"DXGI_FORMAT_BC5_SNORM"; break;
-        case DXGI_FORMAT_B5G6R5_UNORM:
-            pstr = L"DXGI_FORMAT_B5G6R5_UNORM"; break;
-        case DXGI_FORMAT_B5G5R5A1_UNORM:
-            pstr = L"DXGI_FORMAT_B5G5R5A1_UNORM"; break;
-        case DXGI_FORMAT_B8G8R8A8_UNORM:
-            pstr = L"DXGI_FORMAT_B8G8R8A8_UNORM"; break;
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32G32B32A32_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32G32B32A32_FLOAT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32G32B32A32_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32G32B32A32_SINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32G32B32_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32G32B32_FLOAT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32G32B32_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32G32B32_SINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16G16B16A16_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16G16B16A16_FLOAT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16G16B16A16_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16G16B16A16_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16G16B16A16_SNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16G16B16A16_SINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32G32_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32G32_FLOAT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32G32_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32G32_SINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32G8X24_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_D32_FLOAT_S8X24_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_X32_TYPELESS_G8X24_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R10G10B10A2_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R10G10B10A2_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R10G10B10A2_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R11G11B10_FLOAT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8G8B8A8_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8G8B8A8_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8G8B8A8_UNORM_SRGB)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8G8B8A8_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8G8B8A8_SNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8G8B8A8_SINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16G16_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16G16_FLOAT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16G16_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16G16_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16G16_SNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16G16_SINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_D32_FLOAT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32_FLOAT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R32_SINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R24G8_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_D24_UNORM_S8_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R24_UNORM_X8_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_X24_TYPELESS_G8_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8G8_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8G8_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8G8_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8G8_SNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8G8_SINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16_FLOAT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_D16_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16_SNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R16_SINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8_UINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8_SNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8_SINT)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_A8_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R1_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R9G9B9E5_SHAREDEXP)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R8G8_B8G8_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_G8R8_G8B8_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC1_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC1_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC1_UNORM_SRGB)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC2_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC2_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC2_UNORM_SRGB)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC3_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC3_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC3_UNORM_SRGB)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC4_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC4_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC4_SNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC5_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC5_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC5_SNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_B5G6R5_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_B5G5R5A1_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_B8G8R8A8_UNORM)
+
+        // DXGI 1.1
+        DXUTDXGIFMTSTR(DXGI_FORMAT_B8G8R8X8_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_B8G8R8A8_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_B8G8R8A8_UNORM_SRGB)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_B8G8R8X8_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_B8G8R8X8_UNORM_SRGB)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC6H_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC6H_UF16)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC6H_SF16)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC7_TYPELESS)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC7_UNORM)
+        DXUTDXGIFMTSTR(DXGI_FORMAT_BC7_UNORM_SRGB)
+
+        // DXGI 1.2
+        DXUTDXGIFMTSTR(DXGI_FORMAT_B4G4R4A4_UNORM)
+
         default:
             pstr = L"Unknown format"; break;
     }
-    if( bWithPrefix || wcsstr( pstr, L"DXGI_FORMAT_" ) == NULL )
+    if( bWithPrefix || !wcsstr( pstr, L"DXGI_FORMAT_" ) )
         return pstr;
     else
-        return pstr + lstrlen( L"DXGI_FORMAT_" );
+        return pstr + wcslen( L"DXGI_FORMAT_" );
 }
+
+#undef DXUTDXGIFMTSTR
 
 
 //--------------------------------------------------------------------------------------
 // Outputs to the debug stream a formatted Unicode string with a variable-argument list.
 //--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 VOID WINAPI DXUTOutputDebugStringW( LPCWSTR strMsg, ... )
 {
 #if defined(DEBUG) || defined(_DEBUG)
@@ -547,6 +358,7 @@ VOID WINAPI DXUTOutputDebugStringW( LPCWSTR strMsg, ... )
 //--------------------------------------------------------------------------------------
 // Outputs to the debug stream a formatted MBCS string with a variable-argument list.
 //--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 VOID WINAPI DXUTOutputDebugStringA( LPCSTR strMsg, ... )
 {
 #if defined(DEBUG) || defined(_DEBUG)
@@ -566,203 +378,190 @@ VOID WINAPI DXUTOutputDebugStringA( LPCSTR strMsg, ... )
 
 
 //--------------------------------------------------------------------------------------
-// Direct3D9 dynamic linking support -- calls top-level D3D9 APIs with graceful
+// Direct3D dynamic linking support -- calls top-level D3D APIs with graceful
 // failure if APIs are not present.
 //--------------------------------------------------------------------------------------
 
 // Function prototypes
-typedef IDirect3D9* (WINAPI * LPDIRECT3DCREATE9) (UINT);
-typedef INT         (WINAPI * LPD3DPERF_BEGINEVENT)(D3DCOLOR, LPCWSTR);
+typedef INT         (WINAPI * LPD3DPERF_BEGINEVENT)(DWORD, LPCWSTR);
 typedef INT         (WINAPI * LPD3DPERF_ENDEVENT)(void);
-typedef VOID        (WINAPI * LPD3DPERF_SETMARKER)(D3DCOLOR, LPCWSTR);
-typedef VOID        (WINAPI * LPD3DPERF_SETREGION)(D3DCOLOR, LPCWSTR);
+typedef VOID        (WINAPI * LPD3DPERF_SETMARKER)(DWORD, LPCWSTR);
+typedef VOID        (WINAPI * LPD3DPERF_SETREGION)(DWORD, LPCWSTR);
 typedef BOOL        (WINAPI * LPD3DPERF_QUERYREPEATFRAME)(void);
 typedef VOID        (WINAPI * LPD3DPERF_SETOPTIONS)( DWORD dwOptions );
-typedef DWORD       (WINAPI * LPD3DPERF_GETSTATUS)( void );
+typedef DWORD       (WINAPI * LPD3DPERF_GETSTATUS)();
 typedef HRESULT     (WINAPI * LPCREATEDXGIFACTORY)(REFIID, void ** );
-typedef HRESULT     (WINAPI * LPD3D11CREATEDEVICE)( IDXGIAdapter*, D3D_DRIVER_TYPE, HMODULE, UINT32, D3D_FEATURE_LEVEL*, UINT, UINT32, ID3D11Device**, D3D_FEATURE_LEVEL*, ID3D11DeviceContext** );
+typedef HRESULT     (WINAPI * LPDXGIGETDEBUGINTERFACE)(REFIID, void ** );
 
 // Module and function pointers
-static HMODULE                              s_hModD3D9 = NULL;
-static LPDIRECT3DCREATE9                    s_DynamicDirect3DCreate9 = NULL;
-static LPD3DPERF_BEGINEVENT                 s_DynamicD3DPERF_BeginEvent = NULL;
-static LPD3DPERF_ENDEVENT                   s_DynamicD3DPERF_EndEvent = NULL;
-static LPD3DPERF_SETMARKER                  s_DynamicD3DPERF_SetMarker = NULL;
-static LPD3DPERF_SETREGION                  s_DynamicD3DPERF_SetRegion = NULL;
-static LPD3DPERF_QUERYREPEATFRAME           s_DynamicD3DPERF_QueryRepeatFrame = NULL;
-static LPD3DPERF_SETOPTIONS                 s_DynamicD3DPERF_SetOptions = NULL;
-static LPD3DPERF_GETSTATUS                  s_DynamicD3DPERF_GetStatus = NULL;
-static HMODULE                              s_hModDXGI = NULL;
-static LPCREATEDXGIFACTORY                  s_DynamicCreateDXGIFactory = NULL;
-static HMODULE                              s_hModD3D11 = NULL;
-static LPD3D11CREATEDEVICE                  s_DynamicD3D11CreateDevice = NULL;
+static HMODULE                              s_hModD3D9 = nullptr;
+static LPD3DPERF_BEGINEVENT                 s_DynamicD3DPERF_BeginEvent = nullptr;
+static LPD3DPERF_ENDEVENT                   s_DynamicD3DPERF_EndEvent = nullptr;
+static LPD3DPERF_SETMARKER                  s_DynamicD3DPERF_SetMarker = nullptr;
+static LPD3DPERF_SETREGION                  s_DynamicD3DPERF_SetRegion = nullptr;
+static LPD3DPERF_QUERYREPEATFRAME           s_DynamicD3DPERF_QueryRepeatFrame = nullptr;
+static LPD3DPERF_SETOPTIONS                 s_DynamicD3DPERF_SetOptions = nullptr;
+static LPD3DPERF_GETSTATUS                  s_DynamicD3DPERF_GetStatus = nullptr;
+static HMODULE                              s_hModDXGI = nullptr;
+static HMODULE                              s_hModDXGIDebug = nullptr;
+static LPCREATEDXGIFACTORY                  s_DynamicCreateDXGIFactory = nullptr;
+static LPDXGIGETDEBUGINTERFACE              s_DynamicDXGIGetDebugInterface = nullptr;
+static HMODULE                              s_hModD3D11 = nullptr;
+static PFN_D3D11_CREATE_DEVICE              s_DynamicD3D11CreateDevice = nullptr;
 
 // Ensure function pointers are initialized
-static bool DXUT_EnsureD3D9APIs( void )
+static bool DXUT_EnsureD3D9APIs()
 {
     // If the module is non-NULL, this function has already been called.  Note
     // that this doesn't guarantee that all ProcAddresses were found.
-    if( s_hModD3D9 != NULL )
+    if( s_hModD3D9 )
         return true;
 
-    // This may fail if Direct3D 9 isn't installed
-    s_hModD3D9 = LoadLibrary( L"d3d9.dll" );
-    if( s_hModD3D9 != NULL )
+    // This could fail in theory, but not on any modern version of Windows
+    s_hModD3D9 = LoadLibraryEx( L"d3d9.dll", nullptr, 0x00000800 /* LOAD_LIBRARY_SEARCH_SYSTEM32 */ );
+    if( s_hModD3D9 )
     {
-        s_DynamicDirect3DCreate9 = (LPDIRECT3DCREATE9)GetProcAddress( s_hModD3D9, "Direct3DCreate9" );
-        s_DynamicD3DPERF_BeginEvent = (LPD3DPERF_BEGINEVENT)GetProcAddress( s_hModD3D9, "D3DPERF_BeginEvent" );
-        s_DynamicD3DPERF_EndEvent = (LPD3DPERF_ENDEVENT)GetProcAddress( s_hModD3D9, "D3DPERF_EndEvent" );
-        s_DynamicD3DPERF_SetMarker = (LPD3DPERF_SETMARKER)GetProcAddress( s_hModD3D9, "D3DPERF_SetMarker" );
-        s_DynamicD3DPERF_SetRegion = (LPD3DPERF_SETREGION)GetProcAddress( s_hModD3D9, "D3DPERF_SetRegion" );
-        s_DynamicD3DPERF_QueryRepeatFrame = (LPD3DPERF_QUERYREPEATFRAME)GetProcAddress( s_hModD3D9, "D3DPERF_QueryRepeatFrame" );
-        s_DynamicD3DPERF_SetOptions = (LPD3DPERF_SETOPTIONS)GetProcAddress( s_hModD3D9, "D3DPERF_SetOptions" );
-        s_DynamicD3DPERF_GetStatus = (LPD3DPERF_GETSTATUS)GetProcAddress( s_hModD3D9, "D3DPERF_GetStatus" );
+        // TODO - Use 11.1 perf APIs instead?
+        s_DynamicD3DPERF_BeginEvent = reinterpret_cast<LPD3DPERF_BEGINEVENT>( reinterpret_cast<void*>( GetProcAddress( s_hModD3D9, "D3DPERF_BeginEvent" ) ) );
+        s_DynamicD3DPERF_EndEvent = reinterpret_cast<LPD3DPERF_ENDEVENT>( reinterpret_cast<void*>( GetProcAddress( s_hModD3D9, "D3DPERF_EndEvent" ) ) );
+        s_DynamicD3DPERF_SetMarker = reinterpret_cast<LPD3DPERF_SETMARKER>( reinterpret_cast<void*>( GetProcAddress( s_hModD3D9, "D3DPERF_SetMarker" ) ) );
+        s_DynamicD3DPERF_SetRegion = reinterpret_cast<LPD3DPERF_SETREGION>( reinterpret_cast<void*>( GetProcAddress( s_hModD3D9, "D3DPERF_SetRegion" ) ) );
+        s_DynamicD3DPERF_QueryRepeatFrame = reinterpret_cast<LPD3DPERF_QUERYREPEATFRAME>( reinterpret_cast<void*>( GetProcAddress( s_hModD3D9, "D3DPERF_QueryRepeatFrame" ) ) );
+        s_DynamicD3DPERF_SetOptions = reinterpret_cast<LPD3DPERF_SETOPTIONS>( reinterpret_cast<void*>( GetProcAddress( s_hModD3D9, "D3DPERF_SetOptions" ) ) );
+        s_DynamicD3DPERF_GetStatus = reinterpret_cast<LPD3DPERF_GETSTATUS>( reinterpret_cast<void*>( GetProcAddress( s_hModD3D9, "D3DPERF_GetStatus" ) ) );
     }
 
-    return s_hModD3D9 != NULL;
+    return s_hModD3D9 != nullptr;
 }
 
-bool DXUT_EnsureD3D11APIs( void )
+bool DXUT_EnsureD3D11APIs()
 {
     // If both modules are non-NULL, this function has already been called.  Note
     // that this doesn't guarantee that all ProcAddresses were found.
-    if( s_hModD3D11 != NULL && s_hModDXGI != NULL )
+    if( s_hModD3D11 && s_hModDXGI )
         return true;
 
     // This may fail if Direct3D 11 isn't installed
-    s_hModD3D11 = LoadLibrary( L"d3d11.dll" );
-    if( s_hModD3D11 != NULL )
+    s_hModD3D11 = LoadLibraryEx( L"d3d11.dll", nullptr, 0x00000800 /* LOAD_LIBRARY_SEARCH_SYSTEM32 */ );
+    if( s_hModD3D11 )
     {
-        s_DynamicD3D11CreateDevice = ( LPD3D11CREATEDEVICE )GetProcAddress( s_hModD3D11, "D3D11CreateDevice" );
+        s_DynamicD3D11CreateDevice = reinterpret_cast<PFN_D3D11_CREATE_DEVICE>( reinterpret_cast<void*>( GetProcAddress( s_hModD3D11, "D3D11CreateDevice" ) ) );
     }
 
     if( !s_DynamicCreateDXGIFactory )
     {
-        s_hModDXGI = LoadLibrary( L"dxgi.dll" );
+        s_hModDXGI = LoadLibraryEx( L"dxgi.dll", nullptr, 0x00000800 /* LOAD_LIBRARY_SEARCH_SYSTEM32 */ );
         if( s_hModDXGI )
         {
-            s_DynamicCreateDXGIFactory = ( LPCREATEDXGIFACTORY )GetProcAddress( s_hModDXGI, "CreateDXGIFactory1" );
+            s_DynamicCreateDXGIFactory = reinterpret_cast<LPCREATEDXGIFACTORY>( reinterpret_cast<void*>( GetProcAddress( s_hModDXGI, "CreateDXGIFactory1" ) ) );
         }
 
-        return ( s_hModDXGI != NULL ) && ( s_hModD3D11 != NULL );
+        if ( !s_DynamicDXGIGetDebugInterface )
+        {
+            s_hModDXGIDebug = LoadLibraryEx( L"dxgidebug.dll", nullptr, 0x00000800 /* LOAD_LIBRARY_SEARCH_SYSTEM32 */ );
+            if ( s_hModDXGIDebug )
+            {
+                s_DynamicDXGIGetDebugInterface = reinterpret_cast<LPDXGIGETDEBUGINTERFACE>( reinterpret_cast<void*>( GetProcAddress( s_hModDXGIDebug, "DXGIGetDebugInterface" ) ) );
+            }
+        }
+
+        return ( s_hModDXGI ) && ( s_hModD3D11 );
     }
 
-    return ( s_hModD3D11 != NULL );
+    return s_hModD3D11 != nullptr;
 }
 
-IDirect3D9* WINAPI DXUT_Dynamic_Direct3DCreate9( UINT SDKVersion )
+int WINAPI DXUT_Dynamic_D3DPERF_BeginEvent( _In_ DWORD col, _In_z_ LPCWSTR wszName )
 {
-    if( DXUT_EnsureD3D9APIs() && s_DynamicDirect3DCreate9 != NULL )
-        return s_DynamicDirect3DCreate9( SDKVersion );
-    else
-        return NULL;
-}
-
-int WINAPI DXUT_Dynamic_D3DPERF_BeginEvent( D3DCOLOR col, LPCWSTR wszName )
-{
-    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_BeginEvent != NULL )
+    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_BeginEvent )
         return s_DynamicD3DPERF_BeginEvent( col, wszName );
     else
         return -1;
 }
 
-int WINAPI DXUT_Dynamic_D3DPERF_EndEvent( void )
+int WINAPI DXUT_Dynamic_D3DPERF_EndEvent()
 {
-    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_EndEvent != NULL )
+    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_EndEvent )
         return s_DynamicD3DPERF_EndEvent();
     else
         return -1;
 }
 
-void WINAPI DXUT_Dynamic_D3DPERF_SetMarker( D3DCOLOR col, LPCWSTR wszName )
+void WINAPI DXUT_Dynamic_D3DPERF_SetMarker( _In_ DWORD col, _In_z_ LPCWSTR wszName )
 {
-    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_SetMarker != NULL )
+    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_SetMarker )
         s_DynamicD3DPERF_SetMarker( col, wszName );
 }
 
-void WINAPI DXUT_Dynamic_D3DPERF_SetRegion( D3DCOLOR col, LPCWSTR wszName )
+void WINAPI DXUT_Dynamic_D3DPERF_SetRegion( _In_ DWORD col, _In_z_ LPCWSTR wszName )
 {
-    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_SetRegion != NULL )
+    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_SetRegion )
         s_DynamicD3DPERF_SetRegion( col, wszName );
 }
 
-BOOL WINAPI DXUT_Dynamic_D3DPERF_QueryRepeatFrame( void )
+BOOL WINAPI DXUT_Dynamic_D3DPERF_QueryRepeatFrame()
 {
-    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_QueryRepeatFrame != NULL )
+    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_QueryRepeatFrame )
         return s_DynamicD3DPERF_QueryRepeatFrame();
     else
         return FALSE;
 }
 
-void WINAPI DXUT_Dynamic_D3DPERF_SetOptions( DWORD dwOptions )
+void WINAPI DXUT_Dynamic_D3DPERF_SetOptions( _In_ DWORD dwOptions )
 {
-    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_SetOptions != NULL )
+    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_SetOptions )
         s_DynamicD3DPERF_SetOptions( dwOptions );
 }
 
-DWORD WINAPI DXUT_Dynamic_D3DPERF_GetStatus( void )
+DWORD WINAPI DXUT_Dynamic_D3DPERF_GetStatus()
 {
-    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_GetStatus != NULL )
+    if( DXUT_EnsureD3D9APIs() && s_DynamicD3DPERF_GetStatus )
         return s_DynamicD3DPERF_GetStatus();
     else
         return 0;
 }
 
+_Use_decl_annotations_
 HRESULT WINAPI DXUT_Dynamic_CreateDXGIFactory1( REFIID rInterface, void** ppOut )
 {
-    if( DXUT_EnsureD3D11APIs() && s_DynamicCreateDXGIFactory != NULL )
+    if( DXUT_EnsureD3D11APIs() && s_DynamicCreateDXGIFactory )
         return s_DynamicCreateDXGIFactory( rInterface, ppOut );
     else
-        return DXUTERR_NODIRECT3D11;
+        return DXUTERR_NODIRECT3D;
 }
 
+_Use_decl_annotations_
+HRESULT WINAPI DXUT_Dynamic_DXGIGetDebugInterface( REFIID rInterface, void** ppOut )
+{
+    if( DXUT_EnsureD3D11APIs() && s_DynamicDXGIGetDebugInterface )
+        return s_DynamicDXGIGetDebugInterface( rInterface, ppOut );
+    else
+        return E_NOTIMPL;
+}
 
-
+_Use_decl_annotations_
 HRESULT WINAPI DXUT_Dynamic_D3D11CreateDevice( IDXGIAdapter* pAdapter,
                                                D3D_DRIVER_TYPE DriverType,
                                                HMODULE Software,
                                                UINT32 Flags,
-                                               D3D_FEATURE_LEVEL* pFeatureLevels,
+                                               const D3D_FEATURE_LEVEL* pFeatureLevels,
                                                UINT FeatureLevels,
                                                UINT32 SDKVersion,
                                                ID3D11Device** ppDevice,
                                                D3D_FEATURE_LEVEL* pFeatureLevel,
                                                ID3D11DeviceContext** ppImmediateContext )
 {
-    if( DXUT_EnsureD3D11APIs() && s_DynamicD3D11CreateDevice != NULL )
+    if( DXUT_EnsureD3D11APIs() && s_DynamicD3D11CreateDevice )
         return s_DynamicD3D11CreateDevice( pAdapter, DriverType, Software, Flags, pFeatureLevels, FeatureLevels,
                                            SDKVersion, ppDevice, pFeatureLevel, ppImmediateContext );
     else
-        return DXUTERR_NODIRECT3D11;
-}
-
-//--------------------------------------------------------------------------------------
-// Trace a string description of a decl 
-//--------------------------------------------------------------------------------------
-void WINAPI DXUTTraceDecl( D3DVERTEXELEMENT9 decl[MAX_FVF_DECL_SIZE] )
-{
-    int iDecl = 0;
-    for( iDecl = 0; iDecl < MAX_FVF_DECL_SIZE; iDecl++ )
-    {
-        if( decl[iDecl].Stream == 0xFF )
-            break;
-
-        DXUTOutputDebugString( L"decl[%d]=Stream:%d, Offset:%d, %s, %s, %s, UsageIndex:%d\n", iDecl,
-                               decl[iDecl].Stream,
-                               decl[iDecl].Offset,
-                               DXUTTraceD3DDECLTYPEtoString( decl[iDecl].Type ),
-                               DXUTTraceD3DDECLMETHODtoString( decl[iDecl].Method ),
-                               DXUTTraceD3DDECLUSAGEtoString( decl[iDecl].Usage ),
-                               decl[iDecl].UsageIndex );
-    }
-
-    DXUTOutputDebugString( L"decl[%d]=D3DDECL_END\n", iDecl );
+        return DXUTERR_NODIRECT3D;
 }
 
 #define TRACE_ID(iD) case iD: return L#iD;
 
 //--------------------------------------------------------------------------------------
-WCHAR* WINAPI DXUTTraceWindowsMessage( UINT uMsg )
+const WCHAR* WINAPI DXUTTraceWindowsMessage( _In_ UINT uMsg )
 {
     switch( uMsg )
     {
@@ -987,113 +786,6 @@ WCHAR* WINAPI DXUTTraceWindowsMessage( UINT uMsg )
 
 
 //--------------------------------------------------------------------------------------
-WCHAR* WINAPI DXUTTraceD3DDECLTYPEtoString( BYTE t )
-{
-    switch( t )
-    {
-        case D3DDECLTYPE_FLOAT1:
-            return L"D3DDECLTYPE_FLOAT1";
-        case D3DDECLTYPE_FLOAT2:
-            return L"D3DDECLTYPE_FLOAT2";
-        case D3DDECLTYPE_FLOAT3:
-            return L"D3DDECLTYPE_FLOAT3";
-        case D3DDECLTYPE_FLOAT4:
-            return L"D3DDECLTYPE_FLOAT4";
-        case D3DDECLTYPE_D3DCOLOR:
-            return L"D3DDECLTYPE_D3DCOLOR";
-        case D3DDECLTYPE_UBYTE4:
-            return L"D3DDECLTYPE_UBYTE4";
-        case D3DDECLTYPE_SHORT2:
-            return L"D3DDECLTYPE_SHORT2";
-        case D3DDECLTYPE_SHORT4:
-            return L"D3DDECLTYPE_SHORT4";
-        case D3DDECLTYPE_UBYTE4N:
-            return L"D3DDECLTYPE_UBYTE4N";
-        case D3DDECLTYPE_SHORT2N:
-            return L"D3DDECLTYPE_SHORT2N";
-        case D3DDECLTYPE_SHORT4N:
-            return L"D3DDECLTYPE_SHORT4N";
-        case D3DDECLTYPE_USHORT2N:
-            return L"D3DDECLTYPE_USHORT2N";
-        case D3DDECLTYPE_USHORT4N:
-            return L"D3DDECLTYPE_USHORT4N";
-        case D3DDECLTYPE_UDEC3:
-            return L"D3DDECLTYPE_UDEC3";
-        case D3DDECLTYPE_DEC3N:
-            return L"D3DDECLTYPE_DEC3N";
-        case D3DDECLTYPE_FLOAT16_2:
-            return L"D3DDECLTYPE_FLOAT16_2";
-        case D3DDECLTYPE_FLOAT16_4:
-            return L"D3DDECLTYPE_FLOAT16_4";
-        case D3DDECLTYPE_UNUSED:
-            return L"D3DDECLTYPE_UNUSED";
-        default:
-            return L"D3DDECLTYPE Unknown";
-    }
-}
-
-WCHAR* WINAPI DXUTTraceD3DDECLMETHODtoString( BYTE m )
-{
-    switch( m )
-    {
-        case D3DDECLMETHOD_DEFAULT:
-            return L"D3DDECLMETHOD_DEFAULT";
-        case D3DDECLMETHOD_PARTIALU:
-            return L"D3DDECLMETHOD_PARTIALU";
-        case D3DDECLMETHOD_PARTIALV:
-            return L"D3DDECLMETHOD_PARTIALV";
-        case D3DDECLMETHOD_CROSSUV:
-            return L"D3DDECLMETHOD_CROSSUV";
-        case D3DDECLMETHOD_UV:
-            return L"D3DDECLMETHOD_UV";
-        case D3DDECLMETHOD_LOOKUP:
-            return L"D3DDECLMETHOD_LOOKUP";
-        case D3DDECLMETHOD_LOOKUPPRESAMPLED:
-            return L"D3DDECLMETHOD_LOOKUPPRESAMPLED";
-        default:
-            return L"D3DDECLMETHOD Unknown";
-    }
-}
-
-WCHAR* WINAPI DXUTTraceD3DDECLUSAGEtoString( BYTE u )
-{
-    switch( u )
-    {
-        case D3DDECLUSAGE_POSITION:
-            return L"D3DDECLUSAGE_POSITION";
-        case D3DDECLUSAGE_BLENDWEIGHT:
-            return L"D3DDECLUSAGE_BLENDWEIGHT";
-        case D3DDECLUSAGE_BLENDINDICES:
-            return L"D3DDECLUSAGE_BLENDINDICES";
-        case D3DDECLUSAGE_NORMAL:
-            return L"D3DDECLUSAGE_NORMAL";
-        case D3DDECLUSAGE_PSIZE:
-            return L"D3DDECLUSAGE_PSIZE";
-        case D3DDECLUSAGE_TEXCOORD:
-            return L"D3DDECLUSAGE_TEXCOORD";
-        case D3DDECLUSAGE_TANGENT:
-            return L"D3DDECLUSAGE_TANGENT";
-        case D3DDECLUSAGE_BINORMAL:
-            return L"D3DDECLUSAGE_BINORMAL";
-        case D3DDECLUSAGE_TESSFACTOR:
-            return L"D3DDECLUSAGE_TESSFACTOR";
-        case D3DDECLUSAGE_POSITIONT:
-            return L"D3DDECLUSAGE_POSITIONT";
-        case D3DDECLUSAGE_COLOR:
-            return L"D3DDECLUSAGE_COLOR";
-        case D3DDECLUSAGE_FOG:
-            return L"D3DDECLUSAGE_FOG";
-        case D3DDECLUSAGE_DEPTH:
-            return L"D3DDECLUSAGE_DEPTH";
-        case D3DDECLUSAGE_SAMPLE:
-            return L"D3DDECLUSAGE_SAMPLE";
-        default:
-            return L"D3DDECLUSAGE Unknown";
-    }
-}
-
-
-//--------------------------------------------------------------------------------------
 // Multimon API handling for OSes with or without multimon API support
 //--------------------------------------------------------------------------------------
 #define DXUT_PRIMARY_MONITOR ((HMONITOR)0x12340042)
@@ -1101,24 +793,19 @@ typedef HMONITOR ( WINAPI* LPMONITORFROMWINDOW )( HWND, DWORD );
 typedef BOOL ( WINAPI* LPGETMONITORINFO )( HMONITOR, LPMONITORINFO );
 typedef HMONITOR ( WINAPI* LPMONITORFROMRECT )( LPCRECT lprcScreenCoords, DWORD dwFlags );
 
+#pragma warning( suppress : 6101 )
+_Use_decl_annotations_
 BOOL WINAPI DXUTGetMonitorInfo( HMONITOR hMonitor, LPMONITORINFO lpMonitorInfo )
 {
     static bool s_bInited = false;
-    static LPGETMONITORINFO s_pFnGetMonitorInfo = NULL;
+    static LPGETMONITORINFO s_pFnGetMonitorInfo = nullptr;
     if( !s_bInited )
     {
         s_bInited = true;
         HMODULE hUser32 = GetModuleHandle( L"USER32" );
         if( hUser32 )
         {
-            OSVERSIONINFOA osvi =
-            {
-                0
-            }; osvi.dwOSVersionInfoSize = sizeof( osvi ); GetVersionExA( ( OSVERSIONINFOA* )&osvi );
-            bool bNT = ( VER_PLATFORM_WIN32_NT == osvi.dwPlatformId );
-            s_pFnGetMonitorInfo = ( LPGETMONITORINFO )( bNT ? GetProcAddress( hUser32,
-                                                                              "GetMonitorInfoW" ) :
-                                                        GetProcAddress( hUser32, "GetMonitorInfoA" ) );
+            s_pFnGetMonitorInfo = reinterpret_cast<LPGETMONITORINFO>( reinterpret_cast<void*>( GetProcAddress( hUser32, "GetMonitorInfoW" ) ) );
         }
     }
 
@@ -1141,16 +828,17 @@ BOOL WINAPI DXUTGetMonitorInfo( HMONITOR hMonitor, LPMONITORINFO lpMonitorInfo )
 }
 
 
+_Use_decl_annotations_
 HMONITOR WINAPI DXUTMonitorFromWindow( HWND hWnd, DWORD dwFlags )
 {
     static bool s_bInited = false;
-    static LPMONITORFROMWINDOW s_pFnGetMonitorFromWindow = NULL;
+    static LPMONITORFROMWINDOW s_pFnGetMonitorFromWindow = nullptr;
     if( !s_bInited )
     {
         s_bInited = true;
         HMODULE hUser32 = GetModuleHandle( L"USER32" );
-        if( hUser32 ) s_pFnGetMonitorFromWindow = ( LPMONITORFROMWINDOW )GetProcAddress( hUser32,
-                                                                                         "MonitorFromWindow" );
+        if( hUser32 ) s_pFnGetMonitorFromWindow = reinterpret_cast<LPMONITORFROMWINDOW>( reinterpret_cast<void*>( GetProcAddress( hUser32,
+                                                                                         "MonitorFromWindow" ) ) );
     }
 
     if( s_pFnGetMonitorFromWindow )
@@ -1160,15 +848,16 @@ HMONITOR WINAPI DXUTMonitorFromWindow( HWND hWnd, DWORD dwFlags )
 }
 
 
+_Use_decl_annotations_
 HMONITOR WINAPI DXUTMonitorFromRect( LPCRECT lprcScreenCoords, DWORD dwFlags )
 {
     static bool s_bInited = false;
-    static LPMONITORFROMRECT s_pFnGetMonitorFromRect = NULL;
+    static LPMONITORFROMRECT s_pFnGetMonitorFromRect = nullptr;
     if( !s_bInited )
     {
         s_bInited = true;
         HMODULE hUser32 = GetModuleHandle( L"USER32" );
-        if( hUser32 ) s_pFnGetMonitorFromRect = ( LPMONITORFROMRECT )GetProcAddress( hUser32, "MonitorFromRect" );
+        if( hUser32 ) s_pFnGetMonitorFromRect = reinterpret_cast<LPMONITORFROMRECT>( reinterpret_cast<void*>( GetProcAddress( hUser32, "MonitorFromRect" ) ) );
     }
 
     if( s_pFnGetMonitorFromRect )
@@ -1182,37 +871,27 @@ HMONITOR WINAPI DXUTMonitorFromRect( LPCRECT lprcScreenCoords, DWORD dwFlags )
 // Get the desktop resolution of an adapter. This isn't the same as the current resolution 
 // from GetAdapterDisplayMode since the device might be fullscreen 
 //--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 void WINAPI DXUTGetDesktopResolution( UINT AdapterOrdinal, UINT* pWidth, UINT* pHeight )
 {
-    DXUTDeviceSettings DeviceSettings = DXUTGetDeviceSettings();
+    auto DeviceSettings = DXUTGetDeviceSettings();
 
     WCHAR strDeviceName[256] = {0};
     DEVMODE devMode;
     ZeroMemory( &devMode, sizeof( DEVMODE ) );
     devMode.dmSize = sizeof( DEVMODE );
-    if( DeviceSettings.ver == DXUT_D3D9_DEVICE )
+
+    auto pd3dEnum = DXUTGetD3D11Enumeration();
+    assert( pd3dEnum );
+    _Analysis_assume_( pd3dEnum );
+    auto pOutputInfo = pd3dEnum->GetOutputInfo( AdapterOrdinal, DeviceSettings.d3d11.Output );
+    if( pOutputInfo )
     {
-        CD3D9Enumeration* pd3dEnum = DXUTGetD3D9Enumeration();
-        assert( pd3dEnum != NULL );
-        CD3D9EnumAdapterInfo* pAdapterInfo = pd3dEnum->GetAdapterInfo( AdapterOrdinal );
-        if( pAdapterInfo )
-        {
-            MultiByteToWideChar( CP_ACP, 0, pAdapterInfo->AdapterIdentifier.DeviceName, -1, strDeviceName, 256 );
-            strDeviceName[255] = 0;
-        }
-    }
-    else
-    {
-        CD3D11Enumeration* pd3dEnum = DXUTGetD3D11Enumeration();
-        assert( pd3dEnum != NULL );
-        CD3D11EnumOutputInfo* pOutputInfo = pd3dEnum->GetOutputInfo( AdapterOrdinal, DeviceSettings.d3d11.Output );
-        if( pOutputInfo )
-        {
-            wcscpy_s( strDeviceName, 256, pOutputInfo->Desc.DeviceName );
-        }
+        wcscpy_s( strDeviceName, 256, pOutputInfo->Desc.DeviceName );
     }
 
     EnumDisplaySettings( strDeviceName, ENUM_REGISTRY_SETTINGS, &devMode );
+
     if( pWidth )
         *pWidth = devMode.dmPelsWidth;
     if( pHeight )
@@ -1223,6 +902,7 @@ void WINAPI DXUTGetDesktopResolution( UINT AdapterOrdinal, UINT* pWidth, UINT* p
 //--------------------------------------------------------------------------------------
 // Display error msg box to help debug 
 //--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 HRESULT WINAPI DXUTTrace( const CHAR* strFile, DWORD dwLine, HRESULT hr,
                           const WCHAR* strMsg, bool bPopMsgBox )
 {
@@ -1230,267 +910,19 @@ HRESULT WINAPI DXUTTrace( const CHAR* strFile, DWORD dwLine, HRESULT hr,
     if( bPopMsgBox && bShowMsgBoxOnError == false )
         bPopMsgBox = false;
 
-    return DXTrace( strFile, dwLine, hr, strMsg, bPopMsgBox );
-}
-
-
-//--------------------------------------------------------------------------------------
-
-//--------------------------------------------------------------------------------------
-void WINAPI DXUTConvertDeviceSettings11to9( DXUTD3D11DeviceSettings* pIn, DXUTD3D9DeviceSettings* pOut )
-{
-    pOut->AdapterOrdinal = pIn->AdapterOrdinal;
-
-    if( pIn->DriverType == D3D_DRIVER_TYPE_HARDWARE )
-        pOut->DeviceType = D3DDEVTYPE_HAL;
-    else if( pIn->DriverType == D3D_DRIVER_TYPE_REFERENCE )
-        pOut->DeviceType = D3DDEVTYPE_REF;
-    else if( pIn->DriverType == D3D_DRIVER_TYPE_NULL )
-        pOut->DeviceType = D3DDEVTYPE_NULLREF;
-
-    pOut->AdapterFormat = ConvertFormatDXGIToD3D9( pIn->sd.BufferDesc.Format );
-    pOut->BehaviorFlags = D3DCREATE_HARDWARE_VERTEXPROCESSING;
-    pOut->pp.BackBufferWidth = pIn->sd.BufferDesc.Width;
-    pOut->pp.BackBufferHeight = pIn->sd.BufferDesc.Height;
-    pOut->pp.BackBufferFormat = ConvertFormatDXGIToD3D9( pIn->sd.BufferDesc.Format );
-    pOut->pp.BackBufferCount = pIn->sd.BufferCount;
-    pOut->pp.MultiSampleType = ( D3DMULTISAMPLE_TYPE )pIn->sd.SampleDesc.Count;
-    pOut->pp.MultiSampleQuality = pIn->sd.SampleDesc.Quality;
-    pOut->pp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    pOut->pp.hDeviceWindow = pIn->sd.OutputWindow;
-    pOut->pp.Windowed = pIn->sd.Windowed;
-    pOut->pp.EnableAutoDepthStencil = true;
-    pOut->pp.AutoDepthStencilFormat = D3DFMT_D24FS8;
-    pOut->pp.Flags = 0;
-    if( pIn->sd.BufferDesc.RefreshRate.Denominator == 0 )
-        pOut->pp.FullScreen_RefreshRateInHz = 60;
-    else
-        pOut->pp.FullScreen_RefreshRateInHz = pIn->sd.BufferDesc.RefreshRate.Numerator /
-            pIn->sd.BufferDesc.RefreshRate.Denominator;
-
-    switch( pIn->SyncInterval )
+    WCHAR buff[ MAX_PATH ];
+    int result = MultiByteToWideChar( CP_ACP,
+                                      MB_PRECOMPOSED, 
+                                      strFile,
+                                      -1,
+                                      buff,
+                                      MAX_PATH );
+    if ( !result )
     {
-        case 0:
-            pOut->pp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE; break;
-        case 2:
-            pOut->pp.PresentationInterval = D3DPRESENT_INTERVAL_TWO; break;
-        case 3:
-            pOut->pp.PresentationInterval = D3DPRESENT_INTERVAL_THREE; break;
-        case 4:
-            pOut->pp.PresentationInterval = D3DPRESENT_INTERVAL_FOUR; break;
-
-        case 1:
-        default:
-            pOut->pp.PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
-            break;
-    }
-}
-
-
-//--------------------------------------------------------------------------------------
-void WINAPI DXUTConvertDeviceSettings9to11( DXUTD3D9DeviceSettings* pIn, DXUTD3D11DeviceSettings* pOut )
-{
-    pOut->AdapterOrdinal = pIn->AdapterOrdinal;
-
-    if( pIn->DeviceType == D3DDEVTYPE_HAL )
-        pOut->DriverType = D3D_DRIVER_TYPE_HARDWARE;
-    else if( pIn->DeviceType == D3DDEVTYPE_REF )
-        pOut->DriverType = D3D_DRIVER_TYPE_REFERENCE;
-    else if( pIn->DeviceType == D3DDEVTYPE_NULLREF )
-        pOut->DriverType = D3D_DRIVER_TYPE_NULL;
-
-    pOut->Output = 0;
-
-    pOut->sd.BufferDesc.Width = pIn->pp.BackBufferWidth;
-    pOut->sd.BufferDesc.Height = pIn->pp.BackBufferHeight;
-    pOut->sd.BufferDesc.RefreshRate.Numerator = pIn->pp.FullScreen_RefreshRateInHz;
-    pOut->sd.BufferDesc.RefreshRate.Denominator = 1;
-    pOut->sd.BufferDesc.Format = ConvertFormatD3D9ToDXGI( pIn->pp.BackBufferFormat );
-
-    if( pIn->pp.MultiSampleType == D3DMULTISAMPLE_NONMASKABLE )
-    {
-        pOut->sd.SampleDesc.Count = pIn->pp.MultiSampleQuality;
-        pOut->sd.SampleDesc.Quality = 0;
-    }
-    else
-    {
-        pOut->sd.SampleDesc.Count = pIn->pp.MultiSampleType;
-        pOut->sd.SampleDesc.Quality = pIn->pp.MultiSampleQuality;
+        wcscpy_s( buff, L"*ERROR*" );
     }
 
-    pOut->sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    pOut->sd.BufferCount = pIn->pp.BackBufferCount;
-    pOut->sd.OutputWindow = pIn->pp.hDeviceWindow;
-    pOut->sd.Windowed = pIn->pp.Windowed;
-
-#if defined(DEBUG) || defined(_DEBUG)
-    pOut->CreateFlags = D3D11_CREATE_DEVICE_DEBUG;
-#else
-    pOut->CreateFlags = 0;
-#endif
-
-    switch( pIn->pp.PresentationInterval )
-    {
-        case D3DPRESENT_INTERVAL_IMMEDIATE:
-            pOut->SyncInterval = 0; break;
-        case D3DPRESENT_INTERVAL_ONE:
-            pOut->SyncInterval = 1; break;
-        case D3DPRESENT_INTERVAL_TWO:
-            pOut->SyncInterval = 2; break;
-        case D3DPRESENT_INTERVAL_THREE:
-            pOut->SyncInterval = 3; break;
-        case D3DPRESENT_INTERVAL_FOUR:
-            pOut->SyncInterval = 4; break;
-
-        case D3DPRESENT_INTERVAL_DEFAULT:
-        default:
-            pOut->SyncInterval = 1;
-            break;
-    }
-
-    pOut->PresentFlags = 0;
-}
-
-
-
-DXGI_FORMAT WINAPI ConvertFormatD3D9ToDXGI( D3DFORMAT fmt )
-{
-    switch( fmt )
-    {
-        case D3DFMT_UNKNOWN:
-            return DXGI_FORMAT_UNKNOWN;
-        case D3DFMT_R8G8B8:
-        case D3DFMT_A8R8G8B8:
-        case D3DFMT_X8R8G8B8:
-            return DXGI_FORMAT_R8G8B8A8_UNORM;
-        case D3DFMT_R5G6B5:
-            return DXGI_FORMAT_B5G6R5_UNORM;
-        case D3DFMT_X1R5G5B5:
-        case D3DFMT_A1R5G5B5:
-            return DXGI_FORMAT_B5G5R5A1_UNORM;
-        case D3DFMT_A4R4G4B4:
-            return DXGI_FORMAT_R8G8B8A8_UNORM;
-        case D3DFMT_R3G3B2:
-            return DXGI_FORMAT_R8G8B8A8_UNORM;
-        case D3DFMT_A8:
-            return DXGI_FORMAT_A8_UNORM;
-        case D3DFMT_A8R3G3B2:
-            return DXGI_FORMAT_R8G8B8A8_UNORM;
-        case D3DFMT_X4R4G4B4:
-            return DXGI_FORMAT_R8G8B8A8_UNORM;
-        case D3DFMT_A2B10G10R10:
-            return DXGI_FORMAT_R10G10B10A2_UNORM;
-        case D3DFMT_A8B8G8R8:
-        case D3DFMT_X8B8G8R8:
-            return DXGI_FORMAT_B8G8R8A8_UNORM;
-        case D3DFMT_G16R16:
-            return DXGI_FORMAT_R16G16_UNORM;
-        case D3DFMT_A2R10G10B10:
-            return DXGI_FORMAT_R10G10B10A2_UNORM;
-        case D3DFMT_A16B16G16R16:
-            return DXGI_FORMAT_R16G16B16A16_UNORM;
-        case D3DFMT_R16F:
-            return DXGI_FORMAT_R16_FLOAT;
-        case D3DFMT_G16R16F:
-            return DXGI_FORMAT_R16G16_FLOAT;
-        case D3DFMT_A16B16G16R16F:
-            return DXGI_FORMAT_R16G16B16A16_FLOAT;
-        case D3DFMT_R32F:
-            return DXGI_FORMAT_R32_FLOAT;
-        case D3DFMT_G32R32F:
-            return DXGI_FORMAT_R32G32_FLOAT;
-        case D3DFMT_A32B32G32R32F:
-            return DXGI_FORMAT_R32G32B32A32_FLOAT;
-    }
-    return DXGI_FORMAT_UNKNOWN;
-}
-
-
-D3DFORMAT WINAPI ConvertFormatDXGIToD3D9( DXGI_FORMAT fmt )
-{
-    switch( fmt )
-    {
-        case DXGI_FORMAT_UNKNOWN:
-            return D3DFMT_UNKNOWN;
-        case DXGI_FORMAT_R8G8B8A8_UNORM:
-            return D3DFMT_A8R8G8B8;
-        case DXGI_FORMAT_B5G6R5_UNORM:
-            return D3DFMT_R5G6B5;
-        case DXGI_FORMAT_B5G5R5A1_UNORM:
-            return D3DFMT_A1R5G5B5;
-        case DXGI_FORMAT_A8_UNORM:
-            return D3DFMT_A8;
-        case DXGI_FORMAT_R10G10B10A2_UNORM:
-            return D3DFMT_A2B10G10R10;
-        case DXGI_FORMAT_B8G8R8A8_UNORM:
-            return D3DFMT_A8B8G8R8;
-        case DXGI_FORMAT_R16G16_UNORM:
-            return D3DFMT_G16R16;
-        case DXGI_FORMAT_R16G16B16A16_UNORM:
-            return D3DFMT_A16B16G16R16;
-        case DXGI_FORMAT_R16_FLOAT:
-            return D3DFMT_R16F;
-        case DXGI_FORMAT_R16G16_FLOAT:
-            return D3DFMT_G16R16F;
-        case DXGI_FORMAT_R16G16B16A16_FLOAT:
-            return D3DFMT_A16B16G16R16F;
-        case DXGI_FORMAT_R32_FLOAT:
-            return D3DFMT_R32F;
-        case DXGI_FORMAT_R32G32_FLOAT:
-            return D3DFMT_G32R32F;
-        case DXGI_FORMAT_R32G32B32A32_FLOAT:
-            return D3DFMT_A32B32G32R32F;
-    }
-    return D3DFMT_UNKNOWN;
-}
-
-//--------------------------------------------------------------------------------------
-IDirect3DDevice9* WINAPI DXUTCreateRefDevice9( HWND hWnd, bool bNullRef )
-{
-    HRESULT hr;
-    IDirect3D9* pD3D = DXUT_Dynamic_Direct3DCreate9( D3D_SDK_VERSION );
-    if( NULL == pD3D )
-        return NULL;
-
-    D3DDISPLAYMODE Mode;
-    pD3D->GetAdapterDisplayMode( 0, &Mode );
-
-    D3DPRESENT_PARAMETERS pp;
-    ZeroMemory( &pp, sizeof( D3DPRESENT_PARAMETERS ) );
-    pp.BackBufferWidth = 1;
-    pp.BackBufferHeight = 1;
-    pp.BackBufferFormat = Mode.Format;
-    pp.BackBufferCount = 1;
-    pp.SwapEffect = D3DSWAPEFFECT_COPY;
-    pp.Windowed = TRUE;
-    pp.hDeviceWindow = hWnd;
-
-    IDirect3DDevice9* pd3dDevice = NULL;
-    hr = pD3D->CreateDevice( D3DADAPTER_DEFAULT, bNullRef ? D3DDEVTYPE_NULLREF : D3DDEVTYPE_REF,
-                             hWnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &pp, &pd3dDevice );
-
-    SAFE_RELEASE( pD3D );
-    return pd3dDevice;
-}
-
-
-//--------------------------------------------------------------------------------------
-// Helper function to launch the Media Center UI after the program terminates
-//--------------------------------------------------------------------------------------
-bool DXUTReLaunchMediaCenter()
-{
-    // Get the path to Media Center
-    WCHAR szExpandedPath[MAX_PATH];
-    if( !ExpandEnvironmentStrings( L"%SystemRoot%\\ehome\\ehshell.exe", szExpandedPath, MAX_PATH ) )
-        return false;
-
-    // Skip if ehshell.exe doesn't exist
-    if( GetFileAttributes( szExpandedPath ) == 0xFFFFFFFF )
-        return false;
-
-    // Launch ehshell.exe 
-    INT_PTR result = ( INT_PTR )ShellExecute( NULL, TEXT( "open" ), szExpandedPath, NULL, NULL, SW_SHOWNORMAL );
-    return ( result > 32 );
+    return DXTraceW( buff, dwLine, hr, strMsg, bPopMsgBox );
 }
 
 typedef DWORD ( WINAPI* LPXINPUTGETSTATE )( DWORD dwUserIndex, XINPUT_STATE* pState );
@@ -1502,24 +934,25 @@ typedef void ( WINAPI* LPXINPUTENABLE )( BOOL bEnable );
 //--------------------------------------------------------------------------------------
 // Does extra processing on XInput data to make it slightly more convenient to use
 //--------------------------------------------------------------------------------------
+_Use_decl_annotations_
 HRESULT DXUTGetGamepadState( DWORD dwPort, DXUT_GAMEPAD* pGamePad, bool bThumbstickDeadZone,
                              bool bSnapThumbstickToCardinals )
 {
-    if( dwPort >= DXUT_MAX_CONTROLLERS || pGamePad == NULL )
+    if( dwPort >= DXUT_MAX_CONTROLLERS || !pGamePad )
         return E_FAIL;
 
-    static LPXINPUTGETSTATE s_pXInputGetState = NULL;
-    static LPXINPUTGETCAPABILITIES s_pXInputGetCapabilities = NULL;
-    if( NULL == s_pXInputGetState || NULL == s_pXInputGetCapabilities )
+    static LPXINPUTGETSTATE s_pXInputGetState = nullptr;
+    static LPXINPUTGETCAPABILITIES s_pXInputGetCapabilities = nullptr;
+    if( !s_pXInputGetState || !s_pXInputGetCapabilities )
     {
-        HINSTANCE hInst = LoadLibrary( XINPUT_DLL );
+        HINSTANCE hInst = LoadLibraryEx( XINPUT_DLL, nullptr, 0x00000800 /* LOAD_LIBRARY_SEARCH_SYSTEM32 */ );
         if( hInst )
         {
-            s_pXInputGetState = ( LPXINPUTGETSTATE )GetProcAddress( hInst, "XInputGetState" );
-            s_pXInputGetCapabilities = ( LPXINPUTGETCAPABILITIES )GetProcAddress( hInst, "XInputGetCapabilities" );
+            s_pXInputGetState = reinterpret_cast<LPXINPUTGETSTATE>( reinterpret_cast<void*>( GetProcAddress( hInst, "XInputGetState" ) ) );
+            s_pXInputGetCapabilities = reinterpret_cast<LPXINPUTGETCAPABILITIES>( reinterpret_cast<void*>( GetProcAddress( hInst, "XInputGetCapabilities" ) ) );
         }
     }
-    if( s_pXInputGetState == NULL )
+    if( !s_pXInputGetState )
         return E_FAIL;
 
     XINPUT_STATE InputState;
@@ -1614,14 +1047,14 @@ HRESULT DXUTGetGamepadState( DWORD dwPort, DXUT_GAMEPAD* pGamePad, bool bThumbst
 // Don't pause the game or deactive the window without first stopping rumble otherwise 
 // the controller will continue to rumble
 //--------------------------------------------------------------------------------------
-void DXUTEnableXInput( bool bEnable )
+void DXUTEnableXInput( _In_ bool bEnable )
 {
-    static LPXINPUTENABLE s_pXInputEnable = NULL;
-    if( NULL == s_pXInputEnable )
+    static LPXINPUTENABLE s_pXInputEnable = nullptr;
+    if( !s_pXInputEnable )
     {
-        HINSTANCE hInst = LoadLibrary( XINPUT_DLL );
+        HINSTANCE hInst = LoadLibraryEx( XINPUT_DLL, nullptr, 0x00000800 /* LOAD_LIBRARY_SEARCH_SYSTEM32 */ );
         if( hInst )
-            s_pXInputEnable = ( LPXINPUTENABLE )GetProcAddress( hInst, "XInputEnable" );
+            s_pXInputEnable = reinterpret_cast<LPXINPUTENABLE>( reinterpret_cast<void*>( GetProcAddress( hInst, "XInputEnable" ) ) );
     }
 
     if( s_pXInputEnable )
@@ -1635,14 +1068,14 @@ void DXUTEnableXInput( bool bEnable )
 //--------------------------------------------------------------------------------------
 HRESULT DXUTStopRumbleOnAllControllers()
 {
-    static LPXINPUTSETSTATE s_pXInputSetState = NULL;
-    if( NULL == s_pXInputSetState )
+    static LPXINPUTSETSTATE s_pXInputSetState = nullptr;
+    if( !s_pXInputSetState )
     {
-        HINSTANCE hInst = LoadLibrary( XINPUT_DLL );
+        HINSTANCE hInst = LoadLibraryEx( XINPUT_DLL, nullptr, 0x00000800 /* LOAD_LIBRARY_SEARCH_SYSTEM32 */ );
         if( hInst )
-            s_pXInputSetState = ( LPXINPUTSETSTATE )GetProcAddress( hInst, "XInputSetState" );
+            s_pXInputSetState = reinterpret_cast<LPXINPUTSETSTATE>( reinterpret_cast<void*>( GetProcAddress( hInst, "XInputSetState" ) ) );
     }
-    if( s_pXInputSetState == NULL )
+    if( !s_pXInputSetState )
         return E_FAIL;
 
     XINPUT_VIBRATION vibration;
@@ -1657,7 +1090,7 @@ HRESULT DXUTStopRumbleOnAllControllers()
 //--------------------------------------------------------------------------------------
 // Helper functions to create SRGB formats from typeless formats and vice versa
 //--------------------------------------------------------------------------------------
-DXGI_FORMAT MAKE_SRGB( DXGI_FORMAT format )
+DXGI_FORMAT MAKE_SRGB( _In_ DXGI_FORMAT format )
 {
     if( !DXUTIsInGammaCorrectMode() )
         return format;
@@ -1674,66 +1107,146 @@ DXGI_FORMAT MAKE_SRGB( DXGI_FORMAT format )
         case DXGI_FORMAT_BC1_TYPELESS:
         case DXGI_FORMAT_BC1_UNORM:
             return DXGI_FORMAT_BC1_UNORM_SRGB;
+
         case DXGI_FORMAT_BC2_TYPELESS:
         case DXGI_FORMAT_BC2_UNORM:
             return DXGI_FORMAT_BC2_UNORM_SRGB;
+
         case DXGI_FORMAT_BC3_TYPELESS:
         case DXGI_FORMAT_BC3_UNORM:
             return DXGI_FORMAT_BC3_UNORM_SRGB;
 
+        case DXGI_FORMAT_B8G8R8A8_UNORM:
+        case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+            return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+
+        case DXGI_FORMAT_B8G8R8X8_UNORM:
+        case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+            return DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
+
+        case DXGI_FORMAT_BC7_TYPELESS:
+        case DXGI_FORMAT_BC7_UNORM:
+            return DXGI_FORMAT_BC7_UNORM_SRGB;
     };
 
     return format;
 }
 
 //--------------------------------------------------------------------------------------
-DXGI_FORMAT MAKE_TYPELESS( DXGI_FORMAT format )
+DXGI_FORMAT MAKE_TYPELESS( _In_ DXGI_FORMAT format )
 {
-    if( !DXUTIsInGammaCorrectMode() )
-        return format;
-
     switch( format )
     {
-        case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
-        case DXGI_FORMAT_R8G8B8A8_UNORM:
-        case DXGI_FORMAT_R8G8B8A8_UINT:
-        case DXGI_FORMAT_R8G8B8A8_SNORM:
-        case DXGI_FORMAT_R8G8B8A8_SINT:
-            return DXGI_FORMAT_R8G8B8A8_TYPELESS;
+    case DXGI_FORMAT_R32G32B32A32_FLOAT:
+    case DXGI_FORMAT_R32G32B32A32_UINT:
+    case DXGI_FORMAT_R32G32B32A32_SINT:
+        return DXGI_FORMAT_R32G32B32A32_TYPELESS;
 
-        case DXGI_FORMAT_BC1_UNORM_SRGB:
-        case DXGI_FORMAT_BC1_UNORM:
-            return DXGI_FORMAT_BC1_TYPELESS;
-        case DXGI_FORMAT_BC2_UNORM_SRGB:
-        case DXGI_FORMAT_BC2_UNORM:
-            return DXGI_FORMAT_BC2_TYPELESS;
-        case DXGI_FORMAT_BC3_UNORM_SRGB:
-        case DXGI_FORMAT_BC3_UNORM:
-            return DXGI_FORMAT_BC3_TYPELESS;
-    };
+    case DXGI_FORMAT_R32G32B32_FLOAT:
+    case DXGI_FORMAT_R32G32B32_UINT:
+    case DXGI_FORMAT_R32G32B32_SINT:
+        return DXGI_FORMAT_R32G32B32_TYPELESS;
 
-    return format;
+    case DXGI_FORMAT_R16G16B16A16_FLOAT:
+    case DXGI_FORMAT_R16G16B16A16_UNORM:
+    case DXGI_FORMAT_R16G16B16A16_UINT:
+    case DXGI_FORMAT_R16G16B16A16_SNORM:
+    case DXGI_FORMAT_R16G16B16A16_SINT:
+        return DXGI_FORMAT_R16G16B16A16_TYPELESS;
+
+    case DXGI_FORMAT_R32G32_FLOAT:
+    case DXGI_FORMAT_R32G32_UINT:
+    case DXGI_FORMAT_R32G32_SINT:
+        return DXGI_FORMAT_R32G32_TYPELESS;
+
+    case DXGI_FORMAT_R10G10B10A2_UNORM:
+    case DXGI_FORMAT_R10G10B10A2_UINT:
+        return DXGI_FORMAT_R10G10B10A2_TYPELESS;
+
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+    case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+    case DXGI_FORMAT_R8G8B8A8_UINT:
+    case DXGI_FORMAT_R8G8B8A8_SNORM:
+    case DXGI_FORMAT_R8G8B8A8_SINT:
+        return DXGI_FORMAT_R8G8B8A8_TYPELESS;
+
+    case DXGI_FORMAT_R16G16_FLOAT:
+    case DXGI_FORMAT_R16G16_UNORM:
+    case DXGI_FORMAT_R16G16_UINT:
+    case DXGI_FORMAT_R16G16_SNORM:
+    case DXGI_FORMAT_R16G16_SINT:
+        return DXGI_FORMAT_R16G16_TYPELESS;
+
+    case DXGI_FORMAT_D32_FLOAT:
+    case DXGI_FORMAT_R32_FLOAT:
+    case DXGI_FORMAT_R32_UINT:
+    case DXGI_FORMAT_R32_SINT:
+        return DXGI_FORMAT_R32_TYPELESS;
+
+    case DXGI_FORMAT_R8G8_UNORM:
+    case DXGI_FORMAT_R8G8_UINT:
+    case DXGI_FORMAT_R8G8_SNORM:
+    case DXGI_FORMAT_R8G8_SINT:
+        return DXGI_FORMAT_R8G8_TYPELESS;
+
+    case DXGI_FORMAT_R16_FLOAT:
+    case DXGI_FORMAT_D16_UNORM:
+    case DXGI_FORMAT_R16_UNORM:
+    case DXGI_FORMAT_R16_UINT:
+    case DXGI_FORMAT_R16_SNORM:
+    case DXGI_FORMAT_R16_SINT:
+        return DXGI_FORMAT_R16_TYPELESS;
+
+    case DXGI_FORMAT_R8_UNORM:
+    case DXGI_FORMAT_R8_UINT:
+    case DXGI_FORMAT_R8_SNORM:
+    case DXGI_FORMAT_R8_SINT:
+    case DXGI_FORMAT_A8_UNORM:
+        return DXGI_FORMAT_R8_TYPELESS;
+
+    case DXGI_FORMAT_BC1_UNORM:
+    case DXGI_FORMAT_BC1_UNORM_SRGB:
+        return DXGI_FORMAT_BC1_TYPELESS;
+
+    case DXGI_FORMAT_BC2_UNORM:
+    case DXGI_FORMAT_BC2_UNORM_SRGB:
+        return DXGI_FORMAT_BC2_TYPELESS;
+
+    case DXGI_FORMAT_BC3_UNORM:
+    case DXGI_FORMAT_BC3_UNORM_SRGB:
+        return DXGI_FORMAT_BC3_TYPELESS;
+
+    case DXGI_FORMAT_BC4_UNORM:
+    case DXGI_FORMAT_BC4_SNORM:
+        return DXGI_FORMAT_BC4_TYPELESS;
+
+    case DXGI_FORMAT_BC5_UNORM:
+    case DXGI_FORMAT_BC5_SNORM:
+        return DXGI_FORMAT_BC5_TYPELESS;
+
+    case DXGI_FORMAT_B8G8R8A8_UNORM:
+    case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+        return DXGI_FORMAT_B8G8R8A8_TYPELESS;
+
+    case DXGI_FORMAT_B8G8R8X8_UNORM:
+    case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+        return DXGI_FORMAT_B8G8R8X8_TYPELESS;
+
+    case DXGI_FORMAT_BC6H_UF16:
+    case DXGI_FORMAT_BC6H_SF16:
+        return DXGI_FORMAT_BC6H_TYPELESS;
+
+    case DXGI_FORMAT_BC7_UNORM:
+    case DXGI_FORMAT_BC7_UNORM_SRGB:
+        return DXGI_FORMAT_BC7_TYPELESS;
+
+    default:
+        return format;
+    }
 }
-
-//--------------------------------------------------------------------------------------
-HRESULT DXUTSnapD3D9Screenshot( LPCTSTR szFileName )
-{
-    HRESULT hr = S_OK;
-    IDirect3DDevice9* pDev = DXUTGetD3D9Device();
-    if( !pDev )
-        return E_FAIL;
-
-    IDirect3DSurface9* pBackBuffer = NULL;
-    V_RETURN( pDev->GetBackBuffer( 0, 0, D3DBACKBUFFER_TYPE_MONO, &pBackBuffer ) );
-
-    return D3DXSaveSurfaceToFile( szFileName, D3DXIFF_BMP, pBackBuffer, NULL, NULL );
-}
-
-
-
 
 //-------------------------------------------------------------------------------------- 
-HRESULT DXUTSnapD3D11Screenshot( LPCTSTR szFileName, D3DX11_IMAGE_FILE_FORMAT iff )
+HRESULT DXUTSnapD3D11Screenshot( _In_z_ LPCWSTR szFileName, _In_ bool usedds )
 {
     IDXGISwapChain *pSwap = DXUTGetDXGISwapChain();
 
@@ -1745,45 +1258,22 @@ HRESULT DXUTSnapD3D11Screenshot( LPCTSTR szFileName, D3DX11_IMAGE_FILE_FORMAT if
     if (hr != S_OK)
         return hr;
 
-    ID3D11DeviceContext *dc  = DXUTGetD3D11DeviceContext();
-    if (!dc) {
-        SAFE_RELEASE(pBackBuffer);
-        return E_FAIL;
-    }
-    ID3D11Device *pDevice = DXUTGetD3D11Device();
+    auto dc  = DXUTGetD3D11DeviceContext();
     if (!dc) {
         SAFE_RELEASE(pBackBuffer);
         return E_FAIL;
     }
 
-    D3D11_TEXTURE2D_DESC dsc;
-    pBackBuffer->GetDesc(&dsc);
-    D3D11_RESOURCE_DIMENSION dim;
-    pBackBuffer->GetType(&dim);
-    // special case msaa textures
-    ID3D11Texture2D *pCompatableTexture = pBackBuffer;
-    if ( dsc.SampleDesc.Count > 1) {
-        D3D11_TEXTURE2D_DESC dsc_new = dsc;
-        dsc_new.SampleDesc.Count = 1;
-        dsc_new.SampleDesc.Quality = 0;
-        dsc_new.Usage = D3D11_USAGE_DEFAULT;
-        dsc_new.BindFlags = 0;
-        dsc_new.CPUAccessFlags = 0;
-        ID3D11Texture2D *resolveTexture;
-        hr = pDevice->CreateTexture2D(&dsc_new, NULL, &resolveTexture);
-        if ( SUCCEEDED(hr) )
-        {
-            DXUT_SetDebugName(resolveTexture, "DXUT");
-            dc->ResolveSubresource(resolveTexture, 0, pBackBuffer, 0, dsc.Format);
-            pCompatableTexture = resolveTexture;
-        }
-        pCompatableTexture->GetDesc(&dsc);
+    if ( usedds )
+    {
+        hr = DirectX::SaveDDSTextureToFile( dc, pBackBuffer, szFileName );
+    }
+    else
+    {
+        hr = DirectX::SaveWICTextureToFile( dc, pBackBuffer, GUID_ContainerFormatBmp, szFileName );
     }
 
-    hr = D3DX11SaveTextureToFileW(dc, pCompatableTexture, iff, szFileName); 
-        
     SAFE_RELEASE(pBackBuffer);
-    SAFE_RELEASE(pCompatableTexture);
 
     return hr;
 

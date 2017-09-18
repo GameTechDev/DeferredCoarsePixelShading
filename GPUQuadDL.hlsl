@@ -3,15 +3,15 @@
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or imlied.
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
-// limitations under the License.
+// limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef GPU_QUAD_DL_HLSL
@@ -26,7 +26,12 @@
 // Monochromatic specular color implemented as suggested by Naty Hoffman at
 //   http://www.realtimerendering.com/blog/deferred-lighting-approaches/
 
+// StephanieB5: fixing runtime error by adding different code path for MSAA_SAMPLES > 1
+#if MSAA_SAMPLES > 1
 Texture2DMS<float4, MSAA_SAMPLES> gDeferredLightingAccumTexture : register(t7);
+#else
+Texture2D<float4> gDeferredLightingAccumTexture : register(t7);
+#endif // MSAA_SAMPLES > 1
 
 float RGBToLuminance(float3 color)
 {
@@ -79,7 +84,12 @@ float4 GPUQuadDLResolve(FullScreenTriangleVSOut input, uint sampleIndex)
     // Read surface data and accumulated light data
     uint2 coords = uint2(input.positionViewport.xy);
     SurfaceData surface = ComputeSurfaceDataFromGBufferSample(coords, sampleIndex);
+// StephanieB5: fixing runtime error by adding different code path for MSAA_SAMPLES > 1
+#if MSAA_SAMPLES > 1
     float4 accumulated = gDeferredLightingAccumTexture.Load(coords, sampleIndex);
+#else
+    float4 accumulated = gDeferredLightingAccumTexture[coords];
+#endif // MSAA_SAMPLES > 1
 
     float3 lit = float3(0.0f, 0.0f, 0.0f);
 

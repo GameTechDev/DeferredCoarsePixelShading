@@ -3,15 +3,18 @@
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or imlied.
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
-// limitations under the License.
+// limitations under the License.
+//
+// Modified by StephanieB5 to remove dependencies on DirectX SDK in 2017
+//
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
@@ -51,9 +54,9 @@ struct UIConstants
 // NOTE: Must match shader equivalent structure
 struct PointLight
 {
-    D3DXVECTOR3 positionView;
+    DirectX::XMFLOAT3 positionView;
     float attenuationBegin;
-    D3DXVECTOR3 color;
+    DirectX::XMFLOAT3 color;
     float attenuationEnd;
 };
 
@@ -183,11 +186,11 @@ public:
                 CDXUTSDKMesh& mesh_opaque,
                 CDXUTSDKMesh& mesh_alpha,
                 ID3D11ShaderResourceView* skybox,
-                const D3DXMATRIXA16& worldMatrix,
+                const DirectX::CXMMATRIX worldMatrix,
                 const CFirstPersonCamera* viewerCamera,
                 const D3D11_VIEWPORT* viewport,
                 const UIConstants* ui);
-    
+
     void SetActiveLights(ID3D11Device* d3dDevice, unsigned int activeLights);
     unsigned int GetActiveLights() const { return mActiveLights; }
 #ifdef _PERF
@@ -195,7 +198,8 @@ public:
 #endif // _PERF
 
 private:
-    void InitializeLightParameters(ID3D11Device* d3dDevice);
+    // StephanieB5: removed unused parameter ID3D11Device* d3dDevice
+    void InitializeLightParameters();
 
     // Notes: 
     // - Most of these functions should all be called after initializing per frame/pass constants, etc.
@@ -203,25 +207,23 @@ private:
 
     // Set up shader light buffer
     ID3D11ShaderResourceView * SetupLights(ID3D11DeviceContext* d3dDeviceContext,
-                                           const D3DXMATRIXA16& cameraView);
+                                           const DirectX::CXMMATRIX cameraView);
 
+    // StephanieB5 removed unused parameters CFirstPersonCamera* viewerCamera & UIConstants* ui
     // Forward rendering of geometry into
     ID3D11ShaderResourceView * RenderForward(ID3D11DeviceContext* d3dDeviceContext,
                                              CDXUTSDKMesh& mesh_opaque,
                                              CDXUTSDKMesh& mesh_alpha,
                                              ID3D11ShaderResourceView *lightBufferSRV,
-                                             const CFirstPersonCamera* viewerCamera,
                                              const D3D11_VIEWPORT* viewport,
-                                             const UIConstants* ui,
                                              bool doPreZ);
     
+    // StephanieB5: removed unused parameters CFirstPersonCamera* viewerCamera & UIConstants* ui
     // Draws geometry into G-buffer
     void RenderGBuffer(ID3D11DeviceContext* d3dDeviceContext,
                        CDXUTSDKMesh& mesh_opaque,
                        CDXUTSDKMesh& mesh_alpha,
-                       const CFirstPersonCamera* viewerCamera,
-                       const D3D11_VIEWPORT* viewport,
-                       const UIConstants* ui);    
+                       const D3D11_VIEWPORT* viewport);    
 
     // Handles skybox, tone mapping, etc
     void RenderSkyboxAndToneMap(ID3D11DeviceContext* d3dDeviceContext,
@@ -313,7 +315,7 @@ private:
     unsigned int mActiveLights;
     std::vector<PointLightInitTransform> mLightInitialTransform;
     std::vector<PointLight> mPointLightParameters;
-    std::vector<D3DXVECTOR3> mPointLightPositionWorld;
+    std::vector<DirectX::XMFLOAT3> mPointLightPositionWorld;
     
     StructuredBuffer<PointLight>* mLightBuffer;
 
