@@ -3,15 +3,15 @@
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or imlied.
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
-// limitations under the License.
+// limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef SKYBOX_TONE_MAP_HLSL
@@ -33,7 +33,13 @@ Texture2D<float> gDepthTexture : register(t6);
 #endif // MSAA_SAMPLES > 1
 
 // This is the regular multisampled lit texture
+// StephanieB5: fixing runtime error by adding different code path for MSAA_SAMPLES > 1
+#if MSAA_SAMPLES > 1
 Texture2DMS<float4, MSAA_SAMPLES> gLitTexture : register(t7);
+#else
+Texture2D<float4> gLitTexture : register(t7);
+#endif // MSAA_SAMPLES > 1
+
 // Since compute shaders cannot write to multisampled UAVs, this texture is used by
 // the CS paths. It stores each sample separately in rows (i.e. y).
 StructuredBuffer<uint2> gLitTextureFlat : register(t8);
@@ -84,7 +90,12 @@ float4 SkyboxPS(SkyboxVSOut input) : SV_Target0
             [branch] if (useFlatLitBuffer) {
                 sampleLit = UnpackRGBA16(gLitTextureFlat[GetFramebufferSampleAddress(coords, sampleIndex)]).xyz;
             } else {
+// StephanieB5: fixing runtime error by adding different code path for MSAA_SAMPLES > 1
+#if MSAA_SAMPLES > 1
                 sampleLit = gLitTexture.Load(coords, sampleIndex).xyz;
+#else
+                sampleLit = gLitTexture[coords].xyz;
+#endif // MSAA_SAMPLES > 1
             }
 
             // Tone map each sample separately (identity for now) and accumulate
